@@ -5,6 +5,10 @@ and aggregation, geo-queries and relationship graphs. Fork of
 [bfi-de/ngsild-grafana-datasource](https://github.com/bfi-de/ngsild-grafana-datasource), rewritten for
 Grafana 12.3+ and tested against the [Antares](https://antaresbroker.joinedcontext.com) broker.
 
+**Plugin:** [ngsild-grafana-datasource.zip](https://github.com/joinedcontext/Grafana-NGSI-LD-data-source/releases/latest/download/ngsild-grafana-datasource.zip)
+(newest release; [all releases](https://github.com/joinedcontext/Grafana-NGSI-LD-data-source/releases)). It is not
+in the Grafana plugin catalog yet: [install it from the zip](#install-in-an-existing-grafana).
+
 Configuration, query types and variables: [datasource/plugin/README.md](datasource/plugin/README.md).
 Changes: [datasource/plugin/CHANGELOG.md](datasource/plugin/CHANGELOG.md).
 
