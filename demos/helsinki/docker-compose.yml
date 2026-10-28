@@ -20,6 +20,17 @@ services:
     command: ["node", "/seed/seed.mjs", "--broker", "http://antares:9090"]
     restart: "no"
 
+  # a new air quality value per station every minute, so every time range has data
+  stations:
+    image: node:22-alpine
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    volumes:
+      - ../../datasource/seed:/seed:ro
+    command: ["node", "/seed/seed.mjs", "--broker", "http://antares:9090", "--live", "60"]
+    restart: unless-stopped
+
   # live trams from HSL's public MQTT feed (needs internet); each write sets expiresAt 8 minutes ahead
   hsl:
     build: ./hsl

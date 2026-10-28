@@ -23,8 +23,9 @@ the Compose plugin (Linux), and git. Nothing else: Node, Grafana and the broker 
    ```
 
 3. Wait about a minute. The first start downloads the images, and Grafana installs the plugin from the
-   newest [release](https://github.com/joinedcontext/Grafana-NGSI-LD-data-source/releases/latest). Later starts take seconds. `docker compose ps` shows `antares`, `hsl` and `grafana` as *Up* and `seed` as
-   *Exited (0)* when the demo is ready.
+   newest [release](https://github.com/joinedcontext/Grafana-NGSI-LD-data-source/releases/latest). Later
+   starts take seconds. `docker compose ps` shows `antares`, `stations`, `hsl` and `grafana` as *Up* and
+   `seed` as *Exited (0)* when the demo is ready.
 4. Open http://localhost:3000. No login: the Helsinki dashboard is the home page.
 5. Stop it with `docker compose down` in the same folder. `docker compose up -d` starts it again with
    fresh air quality history.
@@ -38,7 +39,7 @@ trams in service. The tram charts fill in over the first minutes. Everything els
 | `port is already allocated` | another program uses port 3000 or 9090: `GRAFANA_PORT=3001 BROKER_PORT=9091 docker compose up -d` (PowerShell: create a file `.env` in `demos/helsinki` with the lines `GRAFANA_PORT=3001` and `BROKER_PORT=9091`) |
 | `Cannot connect to the Docker daemon` / `pipe/dockerDesktopLinuxEngine` | Docker Desktop is not running yet |
 | Map and charts fine, no trams | the tram feed needs internet: `docker compose logs hsl` |
-| Air quality panels empty | the history is older than two days: `docker compose run --rm seed` |
+| Air quality history has a gap | the demo was stopped for a while: `docker compose run --rm seed` writes fresh history |
 | Demo with a fixed plugin version | `NGSILD_PLUGIN_URL=https://github.com/joinedcontext/Grafana-NGSI-LD-data-source/releases/download/v8.0.0/ngsild-grafana-datasource.zip docker compose up -d` |
 
 ![Helsinki demo](screenshots/dashboard.png)

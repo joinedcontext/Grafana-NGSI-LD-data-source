@@ -15,6 +15,7 @@ http://localhost:3000. `docker compose down` stops the demo.
 |---|---|
 | `antares` | `ghcr.io/joinedcontext/antares-broker`, NGSI-LD API on http://localhost:9090/ngsi-ld/v1 |
 | `seed` | Runs `../../datasource/seed/seed.mjs` on every `up`: three air quality stations with 48 h of hourly history ending now, City Hall, Helsinki Cathedral, Mannerheimintie, Senate Square, Esplanadi and Kaisaniemi park |
+| `stations` | Keeps the three stations live: a new value of every air quality attribute each minute, on the same curves as the history |
 | `hsl` | Reads HSL's public vehicle positions (`mqtts://mqtt.hsl.fi:8883`, trams) and writes up to 8 trams as `Vehicle` entities, each with `expiresAt` 8 minutes ahead |
 | `grafana` | `grafana/grafana` with the plugin from the release, the data source and the dashboard `grafana/dashboards/helsinki-live.json` |
 
@@ -23,7 +24,7 @@ http://localhost:3000. `docker compose down` stops the demo.
 - **Map**: parks and Senate Square, buildings, Mannerheimintie (Geo, *Location: Shape*), the stations
   and the trams, each tram turned to its heading and labelled with its line.
 - **Air quality**: PM10 history, the 6-hour NO2 average (temporal aggregation) and the current values.
-  The air quality data is generated, not measured.
+  The air quality data is generated, not measured: hourly for two days, then every minute.
 - **Trams**: speed and delay history (temporal) and a table of the trams on the broker now.
 
 The dashboard refreshes every 10 seconds and shows the last 15 minutes; the air quality panels show the
@@ -51,8 +52,9 @@ network.
 
 ## Refreshing the data
 
-The seed writes history ending at the moment it runs. A day or two after the last start, the air quality
-panels run out of data; `docker compose run --rm seed` writes fresh history. `docker compose logs hsl`
+The seed writes 48 hourly values ending at the hour it runs; `stations` adds a value per minute from then
+on, so a new panel with any time range, *Last 5 minutes* included, shows the stations.
+`docker compose run --rm seed` writes fresh history. `docker compose logs hsl`
 shows the tram feed: once a minute, the trams followed and the updates written.
 
 Tests of the tram feed: `cd hsl && npm ci --ignore-scripts && npm test`.
