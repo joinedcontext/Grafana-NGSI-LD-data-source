@@ -6,7 +6,7 @@
 name: ngsild-helsinki
 services:
   antares:
-    image: ghcr.io/joinedcontext/antares-broker:${ANTARES_VERSION:-latest}
+    image: ghcr.io/joinedcontext/antares-broker:${ANTARES_VERSION:-0.1.4}
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:${BROKER_PORT:-9090}:9090"
 

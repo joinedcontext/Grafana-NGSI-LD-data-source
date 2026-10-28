@@ -14,7 +14,7 @@ http://localhost:3000. `docker compose down` stops the demo.
 
 | Service | Purpose |
 |---|---|
-| `antares` | `ghcr.io/joinedcontext/antares-broker`, NGSI-LD API on http://localhost:9090/ngsi-ld/v1 |
+| `antares` | `ghcr.io/joinedcontext/antares-broker:0.1.4` (`ANTARES_VERSION` picks another), NGSI-LD API on http://localhost:9090/ngsi-ld/v1 |
 | `seed` | Runs `../../datasource/seed/seed.mjs --places-only` on every `up`: City Hall, Helsinki Cathedral, Mannerheimintie, Senate Square, Esplanadi and Kaisaniemi park |
 | `air` | `feeds/fmi.mjs`: the air quality stations of the Finnish Meteorological Institute in Helsinki, Espoo and Vantaa as `AirQualityObserved` entities, with 48 h of hourly history on start and each new hour after |
 | `hsl` | `feeds/hsl.mjs`: HSL's public vehicle positions (`mqtts://mqtt.hsl.fi:8883`, trams), up to 8 trams as `Vehicle` entities linked to their line (`PublicTransportRoute`) and the operator, each with `expiresAt` 8 minutes ahead |

@@ -40,7 +40,7 @@ jobs:
     services:
       # the integration tests seed their own tenant into it
       antares:
-        image: ghcr.io/joinedcontext/antares-broker:latest
+        image: ghcr.io/joinedcontext/antares-broker:0.1.4
         ports:
           - 9090:9090
     steps:

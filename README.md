@@ -68,7 +68,7 @@ stack.
 
 | Service | Purpose |
 |---|---|
-| `antares` | `ghcr.io/joinedcontext/antares-broker`, NGSI-LD API on http://localhost:9090/ngsi-ld/v1 |
+| `antares` | `ghcr.io/joinedcontext/antares-broker:0.1.4` (`ANTARES_VERSION` picks another), NGSI-LD API on http://localhost:9090/ngsi-ld/v1 |
 | `seed` | Runs `seed/seed.mjs` on every `up`: three Helsinki air quality stations with 48 h of hourly history ending now, devices, City Hall with a multi-instance attribute, a road, a zone and two parks (OpenStreetMap shapes), relationships between them. `docker compose run --rm seed` refreshes the history |
 | `grafana` | Grafana built from `plugin/Dockerfile` with the plugin, the provisioned data source and the sample dashboard |
 
@@ -207,7 +207,7 @@ screenshots/    images for this README
 - Brokers cut long temporal answers (`206 Partial Content`). The plugin continues them; *Max temporal
   pages* bounds the requests per query. A broker that serves more instances per answer needs fewer
   requests: Antares reads `ANTARES_TEMPORAL_INSTANCE_LIMIT` and `ANTARES_TEMPORAL_DEFAULT_INSTANCES`; the
-  current `antares-broker:latest` image cuts at 9 instances per attribute.
+  `antares-broker:0.1.4` image cuts at 9 instances per attribute.
 
 ## License
 
