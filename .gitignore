@@ -1,0 +1,21 @@
+# Editor junk
+.vscode/
+.history/
+*.sublime-workspace
+*.swp
+.idea/
+*.iml
+.repomixignore
+repomix-output.md
+repomix.config.json
+apply_patch.js
+apply_patch.txt
+chat.md
+repomix-instruction.md
+na_vymazanie/
+
+# local stack settings (see datasource/.env.example)
+.env
+
+# dependencies (the plugin has its own .gitignore)
+node_modules/

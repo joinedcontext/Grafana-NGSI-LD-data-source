@@ -1,0 +1,55 @@
+# Helsinki demo: Antares NGSI-LD broker, places and air quality for central Helsinki, live HSL trams,
+# Grafana with the NGSI-LD data source from the newest GitHub release.
+#   docker compose up -d      then http://localhost:3000
+# Ports bind to 127.0.0.1: Grafana logs everyone in as admin and Antares authenticates nobody.
+name: ngsild-helsinki
+services:
+  antares:
+    image: ghcr.io/joinedcontext/antares-broker:${ANTARES_VERSION:-latest}
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${BROKER_PORT:-9090}:9090"
+
+  # places and stations with 48 h of hourly history ending now; `docker compose run --rm seed` refreshes it
+  seed:
+    image: node:22-alpine
+    depends_on:
+      antares:
+        condition: service_healthy
+    volumes:
+      - ../../datasource/seed:/seed:ro
+    command: ["node", "/seed/seed.mjs", "--broker", "http://antares:9090"]
+    restart: "no"
+
+  # live trams from HSL's public MQTT feed (needs internet); each write sets expiresAt 8 minutes ahead
+  hsl:
+    build: ./hsl
+    image: ngsild-hsl-vehicles
+    depends_on:
+      antares:
+        condition: service_healthy
+    environment:
+      - BROKER_URL=http://antares:9090
+      - VEHICLES=${HSL_VEHICLES:-8}
+      - EXPIRES_MINUTES=${HSL_EXPIRES_MINUTES:-8}
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:${GRAFANA_VERSION:-12.3.0}
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    environment:
+      # the plugin from the newest GitHub release, installed before Grafana starts; NGSILD_PLUGIN_URL picks
+      # another zip, e.g. .../releases/download/v8.0.0/ngsild-grafana-datasource.zip
+      - GF_PLUGINS_PREINSTALL_SYNC=ngsild-grafana-datasource@@${NGSILD_PLUGIN_URL:-https://github.com/joinedcontext/Grafana-NGSI-LD-data-source/releases/latest/download/ngsild-grafana-datasource.zip}
+      # the release zip is unsigned
+      - GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=ngsild-grafana-datasource
+      # demo only: anonymous admin, never expose this stack
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/helsinki-live.json

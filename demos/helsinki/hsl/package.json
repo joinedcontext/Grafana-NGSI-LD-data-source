@@ -1,0 +1,13 @@
+{
+  "name": "ngsild-hsl-vehicles",
+  "private": true,
+  "description": "Live Helsinki vehicles from HSL's MQTT feed into an NGSI-LD broker (demo)",
+  "type": "module",
+  "scripts": {
+    "start": "node hsl.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "mqtt": "5.16.1"
+  }
+}

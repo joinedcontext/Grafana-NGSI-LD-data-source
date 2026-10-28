@@ -1,0 +1,54 @@
+# Development and test stack: Antares NGSI-LD broker, sample data, Grafana with the plugin built in and the
+# sample dashboard (every query type). The integration and end-to-end tests run against it.
+# The Helsinki demo with live trams: ../demos/helsinki
+#   docker compose up -d      then http://localhost:3000 (the first start builds the plugin, a few minutes)
+# After a change to the plugin: docker compose up -d --build
+# Ports bind to 127.0.0.1: Grafana logs everyone in as admin and Antares authenticates nobody.
+# BIND_ADDRESS=0.0.0.0 publishes them on every interface; do that only on a trusted network.
+# With authentication in front of the broker: docker-compose.auth.yml
+services:
+  antares:
+    image: ghcr.io/joinedcontext/antares-broker:${ANTARES_VERSION:-latest}
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${BROKER_PORT:-9090}:9090"
+
+  # writes 48 h of hourly history ending now; re-running replaces the dataset
+  seed:
+    image: node:22-alpine
+    depends_on:
+      antares:
+        condition: service_healthy
+    volumes:
+      - ./seed:/seed:ro
+    command: ["node", "/seed/seed.mjs", "--broker", "http://antares:9090"]
+    restart: "no"
+
+  grafana:
+    build:
+      context: ./plugin
+      args:
+        GRAFANA_VERSION: ${GRAFANA_VERSION:-12.3.0}
+    image: ngsild-grafana-demo:${GRAFANA_VERSION:-12.3.0}
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - ./volumes/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./volumes/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./volumes/dashboards:/var/lib/grafana/dashboards:ro
+    environment:
+      # the plugin is unsigned
+      - GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=ngsild-grafana-datasource
+      # demo only: anonymous admin, never expose this stack
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/sample-city.json
+      - BROKER_URL=${BROKER_URL:-http://antares:9090}
+      - CONTEXT_URL=${CONTEXT_URL:-}
+      - TENANT=${TENANT:-}
+      - AUTH_TYPE=${AUTH_TYPE:-}
+      - TOKEN_URL=${TOKEN_URL:-}
+      - CLIENT_ID=${CLIENT_ID:-}
+      - CLIENT_SECRET=${CLIENT_SECRET:-}

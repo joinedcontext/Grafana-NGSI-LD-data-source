@@ -1,0 +1,10 @@
+apiVersion: 1
+
+datasources:
+  - name: NGSI-LD
+    uid: ngsild_1
+    type: ngsild-grafana-datasource
+    access: proxy
+    url: http://antares:9090
+    isDefault: true
+    editable: true

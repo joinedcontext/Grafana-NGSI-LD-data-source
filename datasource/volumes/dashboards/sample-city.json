@@ -1,0 +1,350 @@
+{
+ "uid": "ngsild-sample-city",
+ "title": "NGSI-LD sample city",
+ "description": "Every query type of the NGSI-LD data source on the seed dataset (datasource/seed/seed.mjs).",
+ "tags": [
+  "ngsi-ld",
+  "sample"
+ ],
+ "schemaVersion": 39,
+ "editable": true,
+ "time": {
+  "from": "now-2d",
+  "to": "now"
+ },
+ "refresh": "",
+ "templating": {
+  "list": [
+   {
+    "name": "ds",
+    "label": "Data source",
+    "type": "datasource",
+    "query": "ngsild-grafana-datasource",
+    "current": {
+     "text": "NGSI-LD",
+     "value": "ngsild_1"
+    }
+   },
+   {
+    "name": "station",
+    "label": "Station",
+    "type": "query",
+    "datasource": {
+     "type": "ngsild-grafana-datasource",
+     "uid": "${ds}"
+    },
+    "query": "entities(AirQualityObserved, name)",
+    "definition": "entities(AirQualityObserved, name)",
+    "multi": true,
+    "includeAll": true,
+    "allValue": "",
+    "refresh": 1,
+    "current": {
+     "selected": true,
+     "text": [
+      "All"
+     ],
+     "value": [
+      "$__all"
+     ]
+    }
+   }
+  ]
+ },
+ "panels": [
+  {
+   "id": 1,
+   "type": "timeseries",
+   "title": "PM10 and PM2.5 (temporal)",
+   "datasource": {
+    "type": "ngsild-grafana-datasource",
+    "uid": "${ds}"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 12,
+    "h": 9
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "ngsild-grafana-datasource",
+      "uid": "${ds}"
+     },
+     "queryType": "temporal",
+     "entityType": "AirQualityObserved",
+     "entityId": "$station",
+     "entityName": "name",
+     "lang": "en",
+     "attributes": [
+      "pm10",
+      "pm25"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "type": "timeseries",
+   "title": "NO2, 6-hour average and maximum (temporal aggregation)",
+   "datasource": {
+    "type": "ngsild-grafana-datasource",
+    "uid": "${ds}"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 0,
+    "w": 12,
+    "h": 9
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "ngsild-grafana-datasource",
+      "uid": "${ds}"
+     },
+     "queryType": "temporal",
+     "entityType": "AirQualityObserved",
+     "entityId": "$station",
+     "entityName": "name",
+     "lang": "en",
+     "attributes": [
+      "no2"
+     ],
+     "aggrMethod": "avg,max",
+     "aggrPeriodDuration": "PT6H"
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "type": "stat",
+   "title": "Air quality index (current value)",
+   "datasource": {
+    "type": "ngsild-grafana-datasource",
+    "uid": "${ds}"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 9,
+    "w": 8,
+    "h": 6
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "ngsild-grafana-datasource",
+      "uid": "${ds}"
+     },
+     "queryType": "entity",
+     "entityType": "AirQualityObserved",
+     "entityId": "$station",
+     "entityName": "name",
+     "lang": "en",
+     "attributes": [
+      "airQualityIndex"
+     ],
+     "namePattern": "entity_name"
+    }
+   ]
+  },
+  {
+   "id": 4,
+   "type": "table",
+   "title": "Stations (current values)",
+   "datasource": {
+    "type": "ngsild-grafana-datasource",
+    "uid": "${ds}"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 9,
+    "w": 16,
+    "h": 6
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "ngsild-grafana-datasource",
+      "uid": "${ds}"
+     },
+     "queryType": "entity",
+     "format": "table",
+     "entityType": "AirQualityObserved",
+     "entityId": "$station",
+     "entityName": "name",
+     "lang": "en",
+     "attributes": [
+      "name",
+      "pm10",
+      "temperature",
+      "isOnline"
+     ]
+    }
+   ],
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "type": true
+      },
+      "renameByName": {
+       "id": "entity id"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": 5,
+   "type": "geomap",
+   "title": "Locations (points, lines, polygons)",
+   "datasource": {
+    "type": "ngsild-grafana-datasource",
+    "uid": "${ds}"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 15,
+    "w": 12,
+    "h": 12
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "ngsild-grafana-datasource",
+      "uid": "${ds}"
+     },
+     "queryType": "geo",
+     "entityType": "AirQualityObserved,Building,Road,Zone,Park",
+     "entityName": "name",
+     "lang": "en",
+     "geoLocation": "shape"
+    }
+   ],
+   "options": {
+    "view": {
+     "id": "coords",
+     "lat": 60.1755,
+     "lon": 24.944,
+     "zoom": 13.6
+    },
+    "controls": {
+     "showZoom": true,
+     "mouseWheelZoom": true
+    },
+    "basemap": {
+     "type": "osm-standard",
+     "name": "OpenStreetMap"
+    },
+    "layers": [
+     {
+      "type": "markers",
+      "name": "Shapes",
+      "tooltip": true,
+      "location": {
+       "mode": "auto"
+      },
+      "config": {
+       "showLegend": false,
+       "style": {
+        "color": {
+         "fixed": "orange"
+        },
+        "opacity": 0.9,
+        "size": {
+         "fixed": 10
+        },
+        "symbol": {
+         "mode": "fixed",
+         "fixed": "img/icons/marker/circle.svg"
+        },
+        "lineWidth": 3
+       }
+      }
+     },
+     {
+      "type": "markers",
+      "name": "Labels",
+      "tooltip": false,
+      "location": {
+       "mode": "auto"
+      },
+      "config": {
+       "showLegend": false,
+       "style": {
+        "color": {
+         "fixed": "orange"
+        },
+        "opacity": 0.9,
+        "size": {
+         "fixed": 10
+        },
+        "symbol": {
+         "mode": "fixed",
+         "fixed": ""
+        },
+        "text": {
+         "mode": "field",
+         "field": "name",
+         "fixed": ""
+        },
+        "textConfig": {
+         "fontSize": 12,
+         "offsetY": -16,
+         "textAlign": "center",
+         "textBaseline": "bottom"
+        }
+       }
+      }
+     }
+    ],
+    "tooltip": {
+     "mode": "details"
+    }
+   }
+  },
+  {
+   "id": 6,
+   "type": "nodeGraph",
+   "title": "Relationships (node graph)",
+   "datasource": {
+    "type": "ngsild-grafana-datasource",
+    "uid": "${ds}"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 15,
+    "w": 12,
+    "h": 12
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "ngsild-grafana-datasource",
+      "uid": "${ds}"
+     },
+     "queryType": "nodegraph",
+     "entityType": "AirQualityObserved",
+     "entityName": "name",
+     "lang": "en",
+     "primaryNodeAttributes": {
+      "": [
+       "pm10",
+       "batteryLevel",
+       "floorsAboveGround"
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,73 @@
+{
+  "realm": "ngsild",
+  "enabled": true,
+  "accessTokenLifespan": 300,
+  "roles": {
+    "realm": [{ "name": "ngsi-ld-reader", "description": "May read the NGSI-LD API through the gateway" }]
+  },
+  "clients": [
+    {
+      "clientId": "grafana-datasource",
+      "description": "Grafana data source, OAuth2 client credentials; has ngsi-ld-reader",
+      "secret": "datasource-secret",
+      "publicClient": false,
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false
+    },
+    {
+      "clientId": "no-access",
+      "description": "Valid client without ngsi-ld-reader: the gateway must refuse it",
+      "secret": "no-access-secret",
+      "publicClient": false,
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false
+    },
+    {
+      "clientId": "grafana",
+      "description": "Grafana sign-in (generic OAuth); its access token is forwarded by data sources with Forward OAuth identity",
+      "secret": "grafana-secret",
+      "publicClient": false,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["http://localhost*"],
+      "webOrigins": ["+"],
+      "attributes": { "post.logout.redirect.uris": "http://localhost*" }
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-grafana-datasource",
+      "enabled": true,
+      "serviceAccountClientId": "grafana-datasource",
+      "realmRoles": ["default-roles-ngsild", "ngsi-ld-reader"]
+    },
+    {
+      "username": "service-account-no-access",
+      "enabled": true,
+      "serviceAccountClientId": "no-access",
+      "realmRoles": ["default-roles-ngsild"]
+    },
+    {
+      "username": "alice",
+      "enabled": true,
+      "email": "alice@example.org",
+      "emailVerified": true,
+      "firstName": "Alice",
+      "lastName": "Reader",
+      "credentials": [{ "type": "password", "value": "alice", "temporary": false }],
+      "realmRoles": ["default-roles-ngsild", "ngsi-ld-reader"]
+    },
+    {
+      "username": "bob",
+      "enabled": true,
+      "email": "bob@example.org",
+      "emailVerified": true,
+      "firstName": "Bob",
+      "lastName": "Outsider",
+      "credentials": [{ "type": "password", "value": "bob", "temporary": false }],
+      "realmRoles": ["default-roles-ngsild"]
+    }
+  ]
+}

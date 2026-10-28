@@ -1,0 +1,113 @@
+apiVersion: 1
+
+# Data sources of the auth stack (docker-compose.auth.yml): one per authentication mode of the plugin
+# against the gateway (auth/envoy/envoy.yaml), and the cases the gateway has to refuse.
+# Demo credentials only, matching auth/keycloak/ngsild-realm.json and the gateway.
+datasources:
+  # no authentication, straight to the broker: the sample dashboard keeps working
+  - name: NGSI-LD
+    uid: ngsild_1
+    type: ngsild-grafana-datasource
+    access: proxy
+    url: http://antares:9090
+    isDefault: true
+    editable: true
+
+  - name: NGSI-LD (OAuth2 client credentials)
+    uid: ngsild_oauth
+    type: ngsild-grafana-datasource
+    access: proxy
+    url: http://gateway:10000
+    editable: true
+    jsonData:
+      authType: oauth
+      tokenUrl: http://keycloak:8080/realms/ngsild/protocol/openid-connect/token
+    secureJsonData:
+      clientId: grafana-datasource
+      clientSecret: datasource-secret
+
+  - name: NGSI-LD (OAuth2, client without role)
+    uid: ngsild_oauth_no_role
+    type: ngsild-grafana-datasource
+    access: proxy
+    url: http://gateway:10000
+    editable: true
+    jsonData:
+      authType: oauth
+      tokenUrl: http://keycloak:8080/realms/ngsild/protocol/openid-connect/token
+    secureJsonData:
+      clientId: no-access
+      clientSecret: no-access-secret
+
+  - name: NGSI-LD (OAuth2, wrong secret)
+    uid: ngsild_oauth_bad_secret
+    type: ngsild-grafana-datasource
+    access: proxy
+    url: http://gateway:10000
+    editable: true
+    jsonData:
+      authType: oauth
+      tokenUrl: http://keycloak:8080/realms/ngsild/protocol/openid-connect/token
+    secureJsonData:
+      clientId: grafana-datasource
+      clientSecret: not-the-secret
+
+  - name: NGSI-LD (forwarded OAuth identity)
+    uid: ngsild_forward
+    type: ngsild-grafana-datasource
+    access: proxy
+    url: http://gateway:10000
+    editable: true
+    jsonData:
+      oauthPassThru: true
+
+  - name: NGSI-LD (gateway, no credentials)
+    uid: ngsild_gateway_none
+    type: ngsild-grafana-datasource
+    access: proxy
+    url: http://gateway:10000
+    editable: true
+
+  - name: NGSI-LD (basic auth)
+    uid: ngsild_basic
+    type: ngsild-grafana-datasource
+    access: proxy
+    url: http://gateway:10001
+    editable: true
+    basicAuth: true
+    basicAuthUser: grafana
+    secureJsonData:
+      basicAuthPassword: grafana-basic-pw
+
+  - name: NGSI-LD (basic auth, wrong password)
+    uid: ngsild_basic_bad
+    type: ngsild-grafana-datasource
+    access: proxy
+    url: http://gateway:10001
+    editable: true
+    basicAuth: true
+    basicAuthUser: grafana
+    secureJsonData:
+      basicAuthPassword: wrong
+
+  - name: NGSI-LD (API key)
+    uid: ngsild_apikey
+    type: ngsild-grafana-datasource
+    access: proxy
+    url: http://gateway:10002
+    editable: true
+    jsonData:
+      httpHeaderName1: X-API-Key
+    secureJsonData:
+      httpHeaderValue1: demo-api-key-0123456789abcdef
+
+  - name: NGSI-LD (API key, wrong key)
+    uid: ngsild_apikey_bad
+    type: ngsild-grafana-datasource
+    access: proxy
+    url: http://gateway:10002
+    editable: true
+    jsonData:
+      httpHeaderName1: X-API-Key
+    secureJsonData:
+      httpHeaderValue1: wrong

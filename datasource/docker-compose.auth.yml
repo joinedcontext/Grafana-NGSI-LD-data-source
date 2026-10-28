@@ -1,0 +1,61 @@
+# Authentication and authorization in front of the broker, on top of docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.auth.yml up -d
+# Keycloak issues the tokens, an Envoy gateway checks them (auth/envoy/envoy.yaml), Grafana signs users in
+# through Keycloak and provisions one data source per authentication mode (auth/grafana/datasources.yml).
+# Demo credentials only: Keycloak admin admin/admin, users alice/alice (reader) and bob/bob (no access).
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:${KEYCLOAK_VERSION:-26.8.1}
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      # the browser's URL is the token issuer; containers reach Keycloak as keycloak:8080
+      KC_HOSTNAME: http://localhost:${KEYCLOAK_PORT:-8080}
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HEALTH_ENABLED: "true"
+    volumes:
+      - ./auth/keycloak:/opt/keycloak/data/import:ro
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${KEYCLOAK_PORT:-8080}:8080"
+    healthcheck:
+      # the image has no curl: plain HTTP over bash's /dev/tcp to the management port
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/9000 && printf 'GET /health/ready HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q UP <&3"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+
+  gateway:
+    image: envoyproxy/envoy:${ENVOY_VERSION:-v1.34.1}
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      antares:
+        condition: service_healthy
+    environment:
+      ISSUER: http://localhost:${KEYCLOAK_PORT:-8080}/realms/ngsild
+    volumes:
+      - ./auth/envoy/envoy.yaml:/etc/envoy/envoy.tmpl.yaml:ro
+    entrypoint: ["/bin/sh", "-c", "sed \"s|@ISSUER@|$$ISSUER|\" /etc/envoy/envoy.tmpl.yaml > /tmp/envoy.yaml && exec envoy -c /tmp/envoy.yaml --log-level warn"]
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${GATEWAY_PORT:-10000}:10000"
+
+  grafana:
+    depends_on:
+      gateway:
+        condition: service_started
+    volumes:
+      - ./auth/grafana:/etc/grafana/provisioning/datasources:ro
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_SERVER_ROOT_URL=http://localhost:${GRAFANA_PORT:-3000}/
+      - GF_AUTH_GENERIC_OAUTH_ENABLED=true
+      - GF_AUTH_GENERIC_OAUTH_NAME=Keycloak
+      - GF_AUTH_GENERIC_OAUTH_CLIENT_ID=grafana
+      - GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET=grafana-secret
+      - GF_AUTH_GENERIC_OAUTH_SCOPES=openid profile email
+      - GF_AUTH_GENERIC_OAUTH_AUTH_URL=http://localhost:${KEYCLOAK_PORT:-8080}/realms/ngsild/protocol/openid-connect/auth
+      - GF_AUTH_GENERIC_OAUTH_TOKEN_URL=http://keycloak:8080/realms/ngsild/protocol/openid-connect/token
+      - GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP=true
+      # demo: every Keycloak user may explore; the broker side decides what they read
+      - GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH='Editor'

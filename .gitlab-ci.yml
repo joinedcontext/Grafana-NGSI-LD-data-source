@@ -1,0 +1,38 @@
+# Mirror of the GitHub checks (.github/workflows/build.yml): typecheck, lint and unit tests, then the zip.
+# Integration and end-to-end tests run on GitHub, which has the Antares service and the compose stack.
+stages:
+  - test
+  - build
+
+variables:
+  NODE_VERSION: "22" # datasource/plugin/.nvmrc
+
+test_plugin:
+  image: node:${NODE_VERSION}
+  stage: test
+  script:
+    - cd datasource/plugin
+    - npm ci
+    - npm run typecheck
+    - npm run lint
+    - npm run test:ci
+
+build_plugin:
+  image: node:${NODE_VERSION}
+  stage: build
+  needs: [test_plugin]
+  script:
+    - apt-get update && apt-get install -y zip
+    - cd datasource/plugin
+    - npm ci
+    - npm run build
+    - export VERSION=${CI_COMMIT_TAG:-"dev-${CI_COMMIT_SHORT_SHA}"}
+    - export VERSION=${VERSION#v}
+    - export TODAY=$(date -u +"%Y-%m-%d")
+    - sed -i "s/%VERSION%/$VERSION/g; s/%TODAY%/$TODAY/g" dist/plugin.json
+    - cp -r dist ngsild-grafana-datasource
+    - zip -r ngsild-grafana-datasource.zip ngsild-grafana-datasource
+  artifacts:
+    paths:
+      - datasource/plugin/ngsild-grafana-datasource.zip
+    expire_in: 1 week

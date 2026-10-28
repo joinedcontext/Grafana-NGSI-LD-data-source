@@ -1,0 +1,648 @@
+{
+  "uid": "ngsild-helsinki-live",
+  "title": "NGSI-LD Helsinki live",
+  "description": "Places from OpenStreetMap, seeded air quality and live HSL trams (datasource/hsl), all read through the NGSI-LD data source.",
+  "tags": [
+    "ngsi-ld",
+    "sample",
+    "helsinki"
+  ],
+  "schemaVersion": 39,
+  "editable": true,
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "refresh": "10s",
+  "templating": {
+    "list": [
+      {
+        "name": "ds",
+        "label": "Data source",
+        "type": "datasource",
+        "query": "ngsild-grafana-datasource",
+        "current": {
+          "text": "NGSI-LD",
+          "value": "ngsild_1"
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "geomap",
+      "title": "Central Helsinki: places, air quality and live trams",
+      "datasource": {
+        "type": "ngsild-grafana-datasource",
+        "uid": "${ds}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 14
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "ngsild-grafana-datasource",
+            "uid": "${ds}"
+          },
+          "entityType": "Park,Zone",
+          "geoLocation": "shape",
+          "queryType": "geo",
+          "entityName": "name",
+          "lang": "en"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "ngsild-grafana-datasource",
+            "uid": "${ds}"
+          },
+          "entityType": "Building",
+          "geoLocation": "shape",
+          "queryType": "geo",
+          "entityName": "name",
+          "lang": "en"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "ngsild-grafana-datasource",
+            "uid": "${ds}"
+          },
+          "entityType": "Road",
+          "geoLocation": "shape",
+          "queryType": "geo",
+          "entityName": "name",
+          "lang": "en"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "ngsild-grafana-datasource",
+            "uid": "${ds}"
+          },
+          "entityType": "AirQualityObserved",
+          "queryType": "geo",
+          "entityName": "name",
+          "lang": "en"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "ngsild-grafana-datasource",
+            "uid": "${ds}"
+          },
+          "entityType": "Vehicle",
+          "queryType": "geo",
+          "entityName": "name",
+          "lang": "en"
+        }
+      ],
+      "options": {
+        "view": {
+          "id": "coords",
+          "lat": 60.18,
+          "lon": 24.944,
+          "zoom": 13.2
+        },
+        "controls": {
+          "showZoom": true,
+          "mouseWheelZoom": true,
+          "showAttribution": true
+        },
+        "basemap": {
+          "type": "osm-standard",
+          "name": "OpenStreetMap"
+        },
+        "layers": [
+          {
+            "type": "markers",
+            "name": "Parks and squares",
+            "tooltip": true,
+            "location": {
+              "mode": "auto"
+            },
+            "filterData": {
+              "id": "byRefId",
+              "options": "A"
+            },
+            "config": {
+              "showLegend": false,
+              "style": {
+                "color": {
+                  "fixed": "green"
+                },
+                "opacity": 0.9,
+                "size": {
+                  "fixed": 8
+                },
+                "symbol": {
+                  "mode": "fixed",
+                  "fixed": "img/icons/marker/circle.svg"
+                },
+                "lineWidth": 3
+              }
+            }
+          },
+          {
+            "type": "markers",
+            "name": "Buildings",
+            "tooltip": true,
+            "location": {
+              "mode": "auto"
+            },
+            "filterData": {
+              "id": "byRefId",
+              "options": "B"
+            },
+            "config": {
+              "showLegend": false,
+              "style": {
+                "color": {
+                  "fixed": "red"
+                },
+                "opacity": 0.9,
+                "size": {
+                  "fixed": 8
+                },
+                "symbol": {
+                  "mode": "fixed",
+                  "fixed": "img/icons/marker/circle.svg"
+                },
+                "lineWidth": 3
+              }
+            }
+          },
+          {
+            "type": "markers",
+            "name": "Roads",
+            "tooltip": true,
+            "location": {
+              "mode": "auto"
+            },
+            "filterData": {
+              "id": "byRefId",
+              "options": "C"
+            },
+            "config": {
+              "showLegend": false,
+              "style": {
+                "color": {
+                  "fixed": "blue"
+                },
+                "opacity": 0.9,
+                "size": {
+                  "fixed": 8
+                },
+                "symbol": {
+                  "mode": "fixed",
+                  "fixed": "img/icons/marker/circle.svg"
+                },
+                "lineWidth": 5
+              }
+            }
+          },
+          {
+            "type": "markers",
+            "name": "Air quality stations",
+            "tooltip": true,
+            "location": {
+              "mode": "auto"
+            },
+            "filterData": {
+              "id": "byRefId",
+              "options": "D"
+            },
+            "config": {
+              "showLegend": false,
+              "style": {
+                "color": {
+                  "fixed": "orange"
+                },
+                "opacity": 0.9,
+                "size": {
+                  "fixed": 12
+                },
+                "symbol": {
+                  "mode": "fixed",
+                  "fixed": "img/icons/marker/circle.svg"
+                },
+                "lineWidth": 2,
+                "text": {
+                  "mode": "field",
+                  "field": "name",
+                  "fixed": ""
+                },
+                "textConfig": {
+                  "fontSize": 12,
+                  "offsetY": -14,
+                  "textAlign": "center",
+                  "textBaseline": "bottom"
+                }
+              }
+            }
+          },
+          {
+            "type": "markers",
+            "name": "Trams",
+            "tooltip": true,
+            "location": {
+              "mode": "auto"
+            },
+            "filterData": {
+              "id": "byRefId",
+              "options": "E"
+            },
+            "config": {
+              "showLegend": false,
+              "style": {
+                "color": {
+                  "fixed": "purple"
+                },
+                "opacity": 0.9,
+                "size": {
+                  "fixed": 14
+                },
+                "symbol": {
+                  "mode": "fixed",
+                  "fixed": "img/icons/marker/triangle.svg"
+                },
+                "lineWidth": 2,
+                "text": {
+                  "mode": "field",
+                  "field": "line",
+                  "fixed": ""
+                },
+                "textConfig": {
+                  "fontSize": 12,
+                  "offsetY": -14,
+                  "textAlign": "center",
+                  "textBaseline": "bottom"
+                },
+                "rotation": {
+                  "field": "heading",
+                  "fixed": 0,
+                  "max": 360,
+                  "min": -360,
+                  "mode": "mod"
+                }
+              }
+            }
+          }
+        ],
+        "tooltip": {
+          "mode": "details"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Air quality: PM10 (temporal, demo data)",
+      "datasource": {
+        "type": "ngsild-grafana-datasource",
+        "uid": "${ds}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 7
+      },
+      "timeFrom": "2d",
+      "hideTimeOverride": false,
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "ngsild-grafana-datasource",
+            "uid": "${ds}"
+          },
+          "queryType": "temporal",
+          "attributes": [
+            "pm10"
+          ],
+          "namePattern": "entity_name",
+          "entityType": "AirQualityObserved",
+          "entityName": "name",
+          "lang": "en"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "conμgm3",
+          "custom": {
+            "lineWidth": 2,
+            "showPoints": "never",
+            "fillOpacity": 8
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Air quality: NO2, 6-hour average (temporal aggregation, demo data)",
+      "datasource": {
+        "type": "ngsild-grafana-datasource",
+        "uid": "${ds}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 7,
+        "w": 12,
+        "h": 7
+      },
+      "timeFrom": "2d",
+      "hideTimeOverride": false,
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "ngsild-grafana-datasource",
+            "uid": "${ds}"
+          },
+          "queryType": "temporal",
+          "attributes": [
+            "no2"
+          ],
+          "aggrMethod": "avg",
+          "aggrPeriodDuration": "PT6H",
+          "namePattern": "entity_name",
+          "entityType": "AirQualityObserved",
+          "entityName": "name",
+          "lang": "en"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "conμgm3",
+          "custom": {
+            "lineWidth": 2,
+            "showPoints": "always",
+            "pointSize": 6,
+            "fillOpacity": 0
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "bargauge",
+      "title": "Air quality now (current values, demo data)",
+      "datasource": {
+        "type": "ngsild-grafana-datasource",
+        "uid": "${ds}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "ngsild-grafana-datasource",
+            "uid": "${ds}"
+          },
+          "queryType": "entity",
+          "attributes": [
+            "pm10",
+            "pm25",
+            "no2"
+          ],
+          "namePattern": "entity_plus_attribute",
+          "entityType": "AirQualityObserved",
+          "entityName": "name",
+          "lang": "en"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "conμgm3",
+          "min": 0,
+          "max": 60,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 25
+              },
+              {
+                "color": "red",
+                "value": 40
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Tram speed (temporal)",
+      "datasource": {
+        "type": "ngsild-grafana-datasource",
+        "uid": "${ds}"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 14,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "ngsild-grafana-datasource",
+            "uid": "${ds}"
+          },
+          "queryType": "temporal",
+          "entityType": "Vehicle",
+          "attributes": [
+            "speed"
+          ],
+          "entityName": "name",
+          "namePattern": "entity_name"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "velocityms",
+          "custom": {
+            "spanNulls": true,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Tram delay (temporal, late > 0)",
+      "datasource": {
+        "type": "ngsild-grafana-datasource",
+        "uid": "${ds}"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 14,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "ngsild-grafana-datasource",
+            "uid": "${ds}"
+          },
+          "queryType": "temporal",
+          "entityType": "Vehicle",
+          "attributes": [
+            "delay"
+          ],
+          "entityName": "name",
+          "namePattern": "entity_name"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "spanNulls": true,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "table",
+      "title": "Trams now (current values, entities expire 8 minutes after their last update)",
+      "datasource": {
+        "type": "ngsild-grafana-datasource",
+        "uid": "${ds}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 24,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "ngsild-grafana-datasource",
+            "uid": "${ds}"
+          },
+          "queryType": "entity",
+          "format": "table",
+          "entityType": "Vehicle",
+          "attributes": [
+            "name",
+            "line",
+            "speed",
+            "heading",
+            "delay"
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "speed"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "velocityms"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      }
+    }
+  ]
+}

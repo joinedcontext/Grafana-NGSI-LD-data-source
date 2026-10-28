@@ -1,0 +1,46 @@
+{
+  "$schema": "https://raw.githubusercontent.com/grafana/grafana/main/docs/sources/developers/plugins/plugin.schema.json",
+  "type": "datasource",
+  "name": "NGSI-LD",
+  "id": "ngsild-grafana-datasource",
+  "metrics": true,
+  "info": {
+    "description": "Current values, temporal history, aggregations, geo-queries and relationship graphs from NGSI-LD context brokers (ETSI CIM 009)",
+    "author": {
+      "name": "joinedcontext",
+      "url": "https://antaresbroker.joinedcontext.com"
+    },
+    "keywords": ["ngsi-ld", "ngsild", "fiware", "etsi", "context broker", "smart city", "digital twin"],
+    "logos": {
+      "small": "img/logo.svg",
+      "large": "img/logo.svg"
+    },
+    "links": [
+      { "name": "Source", "url": "https://github.com/joinedcontext/Grafana-NGSI-LD-data-source" },
+      { "name": "Upstream (BFI)", "url": "https://github.com/bfi-de/ngsild-grafana-datasource" },
+      { "name": "License", "url": "https://www.apache.org/licenses/LICENSE-2.0" }
+    ],
+    "screenshots": [],
+    "version": "%VERSION%",
+    "updated": "%TODAY%"
+  },
+  "routes": [
+    {
+      "path": "oauth",
+      "method": "GET",
+      "url": "{{ .URL }}",
+      "tokenAuth": {
+        "url": "{{ .JsonData.tokenUrl }}",
+        "params": {
+          "grant_type": "client_credentials",
+          "client_id": "{{ .SecureJsonData.clientId }}",
+          "client_secret": "{{ .SecureJsonData.clientSecret }}"
+        }
+      }
+    }
+  ],
+  "dependencies": {
+    "grafanaDependency": ">=12.3.0",
+    "plugins": []
+  }
+}
