@@ -1,5 +1,14 @@
 # Changelog
 
+## 8.1.1
+
+Ready for the Grafana plugin catalog (plugin validator):
+
+* Screenshots in `plugin.json` (Helsinki dashboard, query editor, settings)
+* LICENSE names the copyright holders
+* `basic-ftp` 6.2.3 (CVE-2026-102990, high) through an override; it reaches the dev dependency
+  `@grafana/sign-plugin` only, the plugin itself does not contain it
+
 ## 8.1.0
 
 * Geo query *Location: Trail*: the GeoProperty's history in the time range as one line per entity, with

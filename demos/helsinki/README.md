@@ -9,7 +9,7 @@ docker compose up -d
 ```
 
 Grafana installs the plugin from the
-[GitHub release](https://github.com/joinedcontext/Grafana-NGSI-LD-data-source/releases/tag/v8.1.0) the dashboard is made for before it starts. Then open
+[GitHub release](https://github.com/joinedcontext/Grafana-NGSI-LD-data-source/releases/tag/v8.1.1) the dashboard is made for before it starts. Then open
 http://localhost:3000. `docker compose down` stops the demo.
 
 | Service | Purpose |
@@ -58,7 +58,7 @@ the temporal panels keep everything.
 | `GRAFANA_PORT`, `BROKER_PORT` | 3000, 9090 | host ports |
 | `BIND_ADDRESS` | 127.0.0.1 | `0.0.0.0` publishes the ports on every interface |
 | `GRAFANA_VERSION` | 12.3.0 | Grafana release (also tested: 13.2.4) |
-| `NGSILD_PLUGIN_URL` | the v8.1.0 release zip | plugin zip, e.g. `https://github.com/joinedcontext/Grafana-NGSI-LD-data-source/releases/latest/download/ngsild-grafana-datasource.zip` |
+| `NGSILD_PLUGIN_URL` | the v8.1.1 release zip | plugin zip, e.g. `https://github.com/joinedcontext/Grafana-NGSI-LD-data-source/releases/latest/download/ngsild-grafana-datasource.zip` |
 
 The feeds also read `FMI_PLACE`, `HISTORY_HOURS`, `POLL_MINUTES`, `EVENTS_HOURS`, `EVENTS_MAX` and
 `EVENTS_BBOX` (see the head of each script); set them under `environment` in `docker-compose.yml`.

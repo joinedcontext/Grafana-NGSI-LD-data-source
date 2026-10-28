@@ -20,7 +20,11 @@
       { "name": "Upstream (BFI)", "url": "https://github.com/bfi-de/ngsild-grafana-datasource" },
       { "name": "License", "url": "https://www.apache.org/licenses/LICENSE-2.0" }
     ],
-    "screenshots": [],
+    "screenshots": [
+      { "name": "Helsinki demo dashboard", "path": "img/dashboard.png" },
+      { "name": "Query editor", "path": "img/query-editor.png" },
+      { "name": "Data source settings", "path": "img/config.png" }
+    ],
     "version": "%VERSION%",
     "updated": "%TODAY%"
   },
