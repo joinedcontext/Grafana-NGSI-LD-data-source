@@ -81,8 +81,8 @@ jobs:
         with:
           node-version-file: datasource/plugin/.nvmrc
 
-      - name: HSL feed tests
-        working-directory: demos/helsinki/hsl
+      - name: Demo feed tests
+        working-directory: demos/helsinki/feeds
         run: |
           npm ci --ignore-scripts
           npm test

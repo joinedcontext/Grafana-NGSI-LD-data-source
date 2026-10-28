@@ -1,5 +1,6 @@
-# Helsinki demo: Antares NGSI-LD broker, places and air quality for central Helsinki, live HSL trams,
-# Grafana with the NGSI-LD data source from the newest GitHub release.
+# Helsinki demo: Antares NGSI-LD broker with live open data of Helsinki (FMI air quality, HSL trams,
+# Linked Events) and OpenStreetMap places, Grafana with the NGSI-LD data source from the newest GitHub
+# release. The feeds need internet.
 #   docker compose up -d      then http://localhost:3000
 # Ports bind to 127.0.0.1: Grafana logs everyone in as admin and Antares authenticates nobody.
 name: ngsild-helsinki
@@ -9,7 +10,7 @@ services:
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:${BROKER_PORT:-9090}:9090"
 
-  # places and stations with 48 h of hourly history ending now; `docker compose run --rm seed` refreshes it
+  # buildings, roads, parks and squares (OpenStreetMap shapes); `docker compose run --rm seed` rewrites them
   seed:
     image: node:22-alpine
     depends_on:
@@ -17,24 +18,26 @@ services:
         condition: service_healthy
     volumes:
       - ../../datasource/seed:/seed:ro
-    command: ["node", "/seed/seed.mjs", "--broker", "http://antares:9090"]
+    command: ["node", "/seed/seed.mjs", "--broker", "http://antares:9090", "--places-only"]
     restart: "no"
 
-  # a new air quality value per station every minute, so every time range has data
-  stations:
-    image: node:22-alpine
+  # measured air quality of 8 stations (Finnish Meteorological Institute): 48 h history, then hourly
+  air:
+    build: ./feeds
+    image: ngsild-helsinki-feeds
+    command: ["node", "fmi.mjs"]
     depends_on:
-      seed:
-        condition: service_completed_successfully
-    volumes:
-      - ../../datasource/seed:/seed:ro
-    command: ["node", "/seed/seed.mjs", "--broker", "http://antares:9090", "--live", "60"]
+      antares:
+        condition: service_healthy
+    environment:
+      - BROKER_URL=http://antares:9090
     restart: unless-stopped
 
-  # live trams from HSL's public MQTT feed (needs internet); each write sets expiresAt 8 minutes ahead
+  # live trams from HSL's public MQTT feed; each write sets expiresAt 8 minutes ahead
   hsl:
-    build: ./hsl
-    image: ngsild-hsl-vehicles
+    build: ./feeds
+    image: ngsild-helsinki-feeds
+    command: ["node", "hsl.mjs"]
     depends_on:
       antares:
         condition: service_healthy
@@ -44,8 +47,22 @@ services:
       - EXPIRES_MINUTES=${HSL_EXPIRES_MINUTES:-8}
     restart: unless-stopped
 
+  # the next 24 h of events in central Helsinki (Linked Events); each expires when it ends
+  events:
+    build: ./feeds
+    image: ngsild-helsinki-feeds
+    command: ["node", "events.mjs"]
+    depends_on:
+      antares:
+        condition: service_healthy
+    environment:
+      - BROKER_URL=http://antares:9090
+    restart: unless-stopped
+
   grafana:
     image: grafana/grafana:${GRAFANA_VERSION:-12.3.0}
+    # Grafana stops when the plugin download fails (no internet yet); it tries again
+    restart: unless-stopped
     depends_on:
       seed:
         condition: service_completed_successfully

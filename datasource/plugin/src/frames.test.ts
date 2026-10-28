@@ -13,6 +13,7 @@ import {
   Series,
   seriesKey,
   seriesToFrames,
+  seriesToTrails,
   shortId,
   temporalNames,
 } from './frames';
@@ -297,6 +298,61 @@ describe('seriesToFrames', () => {
     expect(field(avg, 'p').config.unit).toBe('celsius');
     expect(field(avg, 'p').labels.aggregation).toBe('avg');
   });
+
+  it('turns a GeoProperty history into a latitude/longitude track, gaps kept', () => {
+    const point = (lon: number, lat: number) => ({ type: 'Point', coordinates: [lon, lat] });
+    const s: Series = {
+      entityId: 'urn:ngsi-ld:Vehicle:V1',
+      entityType: 'Vehicle',
+      attr: 'location',
+      points: new Map<number, unknown>([
+        [ms(T1), point(24.95, 60.17)],
+        [ms(T0), point(24.94, 60.16)],
+        [ms(T0) + 1, null],
+      ]),
+    };
+    const [frame] = seriesToFrames([s], q(), new Map());
+    expect(frame.fields.map((f) => f.name)).toEqual(['Time', 'latitude', 'longitude']);
+    expect(field(frame, 'Time').values).toEqual([ms(T0), ms(T0) + 1, ms(T1)]);
+    expect(field(frame, 'latitude').values).toEqual([60.16, null, 60.17]);
+    expect(field(frame, 'longitude').values).toEqual([24.94, null, 24.95]);
+    expect(field(frame, 'latitude').type).toBe(FieldType.number);
+    expect(field(frame, 'latitude').labels).toEqual({ entity: 'urn:ngsi-ld:Vehicle:V1', type: 'Vehicle' });
+  });
+
+  it('places a line or polygon history at the mean of its positions', () => {
+    const s: Series = {
+      entityId: 'e',
+      entityType: 'T',
+      attr: 'location',
+      points: new Map([
+        [
+          0,
+          {
+            type: 'LineString',
+            coordinates: [
+              [0, 0],
+              [2, 4],
+            ],
+          },
+        ],
+      ]),
+    };
+    const [frame] = seriesToFrames([s], q(), new Map());
+    expect(field(frame, 'latitude').values).toEqual([2]);
+    expect(field(frame, 'longitude').values).toEqual([1]);
+  });
+
+  it.each([
+    ['numbers', [1, 2]],
+    ['only gaps', [null, null]],
+    ['a geometry next to a number', [{ type: 'Point', coordinates: [1, 2] }, 3]],
+    ['objects that are no geometry', [{ a: 1 }]],
+  ])('keeps the value field for %s', (_, values) => {
+    const s: Series = { entityId: 'e', entityType: 'T', attr: 'p', points: new Map(values.map((v, i) => [i, v])) };
+    const [frame] = seriesToFrames([s], q(), new Map());
+    expect(frame.fields.map((f) => f.name)).toEqual(['Time', 'p']);
+  });
 });
 
 describe('entitiesToTimeseries', () => {
@@ -378,6 +434,25 @@ describe('entitiesToTable', () => {
 
   it('builds an empty table for no entities', () => {
     expect(entitiesToTable([], q()).length).toBe(0);
+  });
+
+  it('shows expiresAt as a time column when an entity has one', () => {
+    const frame = entitiesToTable(
+      [
+        { id: 'a', type: 'T', expiresAt: '2026-10-28T16:00:00Z', speed: { type: 'Property', value: 1 } },
+        { id: 'b', type: 'T', expiresAt: 'never', speed: { type: 'Property', value: 2 } },
+        { id: 'c', type: 'T', speed: { type: 'Property', value: 3 } },
+      ] as Entity[],
+      q({ format: 'table' })
+    );
+    expect(frame.fields.map((f) => f.name)).toEqual(['id', 'type', 'expiresAt', 'speed']);
+    expect(field(frame, 'expiresAt').type).toBe(FieldType.time);
+    expect(field(frame, 'expiresAt').values).toEqual([Date.parse('2026-10-28T16:00:00Z'), null, null]);
+  });
+
+  it('has no expiresAt column without one', () => {
+    const frame = entitiesToTable([{ id: 'a', type: 'T' }] as Entity[], q({ format: 'table' }));
+    expect(frame.fields.map((f) => f.name)).toEqual(['id', 'type']);
   });
 });
 
@@ -587,5 +662,51 @@ describe('entitiesToGeo', () => {
     expect(mapGeometry({ type: 'Point', coordinates: [1, 2] })?.getType()).toBe('Point');
     expect(mapGeometry({ type: 'Nonsense' })).toBeNull();
     expect(mapGeometry(undefined)).toBeNull();
+  });
+});
+
+describe('seriesToTrails', () => {
+  const point = (lon: number, lat: number) => ({ type: 'Point', coordinates: [lon, lat] });
+  const track = (entityId: string, points: Array<[number, unknown]>): Series => ({
+    entityId,
+    entityType: 'Vehicle',
+    attr: 'location',
+    points: new Map(points),
+  });
+
+  it('gives a row per entity: the track as a line, the newest position and its time', () => {
+    const frame = seriesToTrails(
+      [
+        track('urn:ngsi-ld:Vehicle:V1', [
+          [2000, point(24.95, 60.17)],
+          [1000, point(24.94, 60.16)],
+          [3000, null],
+        ]),
+        track('urn:ngsi-ld:Vehicle:V2', [[1000, point(25, 60)]]),
+      ],
+      q({ entityName: 'name' }),
+      new Map([['urn:ngsi-ld:Vehicle:V1', 'Tram 4']])
+    );
+    expect(field(frame, 'id').values).toEqual(['urn:ngsi-ld:Vehicle:V1', 'urn:ngsi-ld:Vehicle:V2']);
+    expect(field(frame, 'name').values).toEqual(['Tram 4', 'V2']);
+    expect(field(frame, 'time').values).toEqual([2000, 1000]);
+    expect(field(frame, 'latitude').values).toEqual([60.17, 60]);
+    expect(field(frame, 'longitude').values).toEqual([24.95, 25]);
+    expect(field(frame, 'positions').values).toEqual([2, 1]);
+    const [line, single] = field(frame, 'geometry').values;
+    expect(field(frame, 'geometry').type).toBe(FieldType.geo);
+    expect(line.getType()).toBe('LineString');
+    expect(line.getCoordinates()).toHaveLength(2);
+    expect(single.getType()).toBe('Point');
+  });
+
+  it('leaves out series that are no geometry history', () => {
+    const frame = seriesToTrails(
+      [{ entityId: 'e', entityType: 'T', attr: 'speed', points: new Map([[0, 3]]) }, track('gaps', [[0, null]])],
+      q(),
+      new Map()
+    );
+    expect(frame.length).toBe(0);
+    expect(frame.fields.map((f) => f.name)).toContain('geometry');
   });
 });

@@ -1,5 +1,16 @@
 # Changelog
 
+## 8.1.0
+
+* Geo query *Location: Trail*: the GeoProperty's history in the time range as one line per entity, with
+  the last position and time, in one frame that Geomap draws
+* Temporal query of a GeoProperty gives latitude and longitude series instead of no data
+* Current value table: `expiresAt` column when any entity has one
+* Query editor labels fit *Time property* and *System attributes*
+* Helsinki demo on live open data: FMI air quality (8 stations, 48 h history), Linked Events with venues
+  and expiry, HSL trams linked to their lines and the operator; tram trails, events table and pie chart,
+  air quality state timeline and two node graphs; feeds in `demos/helsinki/feeds`
+
 ## 8.0.0
 
 Rewrite on the current Grafana plugin tooling (`@grafana/create-plugin`, React 19, Grafana 12.3+).

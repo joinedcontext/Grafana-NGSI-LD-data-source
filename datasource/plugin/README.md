@@ -49,14 +49,18 @@ to refuse writes for these credentials.
   instances (`urn:ngsi-ld:null`) are gaps; with `deletedAt` each deletion charts as 1.
 - **Current value**: current attribute values as one frame per attribute (stat, gauge) or one table.
   *Representation* (Normalized, Concise, keyValues) and *System attributes* (`createdAt`, `modifiedAt`)
-  apply to this type only.
+  apply to this type only. Entities with `expiresAt` add it as a time column after id and type.
 - **Geo**: entity locations for the Geomap panel. *Location: Point* gives latitude/longitude, with lines
   and polygons placed at the mean of their positions. *Location: Shape* gives the geometry as a geo field
   that the Geomap markers layer draws: points as markers, lines as lines, polygons as the outline of each
   ring, multi geometries and collections as their members (one row per part, each with the entity's
   columns). Grafana 12.3 and 13 drop a line's stroke in a markers layer that also shows text, so put the
   shapes in one markers layer without text and the names in a second layer without a symbol, as the
-  sample dashboard does.
+  sample dashboard does. *Location: Trail* reads the GeoProperty's history in the time range from the
+  temporal API and gives one row per entity with its track as a line (a point with a single position),
+  the time and position of the last one and the number of positions; Geomap draws only the first frame of
+  a query, so the trails come as one frame.
+  A temporal query of a GeoProperty gives latitude and longitude series.
 - **Node graph**: entities and their relationships, followed up to a configurable depth and 1000 nodes.
   The selected attributes do not limit the entities' members, so relationships and their edges stay.
 

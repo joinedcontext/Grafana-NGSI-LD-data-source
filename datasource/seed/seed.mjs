@@ -6,12 +6,12 @@
 // relationships and scopes.
 //
 //   node seed.mjs [--broker http://localhost:9090] [--tenant t] [--anchor 2026-01-01T00:00:00Z] [--hours 48]
-//   node seed.mjs --live 60 [--broker …]
+//   node seed.mjs --places-only [--broker …]
 //
 // Without --anchor the history ends at the current hour (live demo data);
 // with --anchor it starts at that instant, so values are reproducible (tests).
-// Re-running replaces the dataset. --live N writes nothing else: every N seconds a new value of each
-// station series, continuing the hourly curves, so every dashboard time range has data.
+// Re-running replaces the dataset. --places-only leaves out the stations and their devices (the Helsinki
+// demo has measured air quality).
 
 const args = Object.fromEntries(
   process.argv.slice(2).reduce((acc, a, i, all) => (a.startsWith('--') ? [...acc, [a.slice(2), all[i + 1]]] : acc), [])
@@ -21,11 +21,11 @@ const TENANT = args.tenant || process.env.TENANT || '';
 const HOURS = Number(args.hours || process.env.SEED_HOURS || 48);
 const HOUR = 3600_000;
 const anchor = args.anchor || process.env.SEED_ANCHOR;
-const LIVE = args.live === undefined ? 0 : Number(args.live);
+const PLACES_ONLY = 'places-only' in args;
 // first history instant; the current value is observed one hour after the last instance
 const start = anchor ? Date.parse(anchor) : Math.floor(Date.now() / HOUR) * HOUR - HOURS * HOUR;
-if (!Number.isFinite(start) || !(HOURS > 0) || !(LIVE >= 0 && Number.isFinite(LIVE)) || (LIVE > 0 && LIVE < 1)) {
-  console.error('invalid --anchor, --hours or --live');
+if (!Number.isFinite(start) || !(HOURS > 0)) {
+  console.error('invalid --anchor or --hours');
   process.exit(2);
 }
 const iso = (t) => new Date(t).toISOString();
@@ -72,7 +72,7 @@ const places = [
 ];
 
 const entities = [
-  ...stations.map((s) => ({
+  ...(PLACES_ONLY ? [] : stations).map((s) => ({
     id: aqId(s.n),
     type: 'AirQualityObserved',
     scope: s.scope,
@@ -93,7 +93,7 @@ const entities = [
       ])
     ),
   })),
-  ...stations.map((s) => ({
+  ...(PLACES_ONLY ? [] : stations).map((s) => ({
     id: devId(s.n),
     type: 'Device',
     name: { type: 'Property', value: `Sensor box ${s.n}` },
@@ -170,7 +170,7 @@ async function main() {
   await call('POST', '/entityOperations/upsert?options=replace', entities, [200, 201, 204]);
 
   const instances = (fn) => Array.from({ length: HOURS }, (_, i) => fn(i, iso(start + i * HOUR)));
-  for (const s of stations) {
+  for (const s of PLACES_ONLY ? [] : stations) {
     const body = Object.fromEntries(
       Object.keys(series).map((attr) => [
         attr,
@@ -188,35 +188,7 @@ async function main() {
   console.log(`seeded ${entities.length} entities, ${HOURS} hourly instances from ${iso(start)} into ${BROKER}${TENANT ? ' tenant ' + TENANT : ''}`);
 }
 
-async function live() {
-  process.on('SIGTERM', () => process.exit(0));
-  await waitForBroker();
-  console.log(`writing station values every ${LIVE} s into ${BROKER}${TENANT ? ' tenant ' + TENANT : ''}`);
-  for (;;) {
-    const t = Date.now();
-    // fractional hour index: the minute values lie on the seeded hourly curves
-    const i = (t - start) / HOUR;
-    const body = stations.map((s) => ({
-      id: aqId(s.n),
-      type: 'AirQualityObserved',
-      ...Object.fromEntries(
-        Object.keys(series).map((attr) => [
-          attr,
-          { type: 'Property', value: series[attr](s.n, i), unitCode: units[attr], observedAt: iso(t) },
-        ])
-      ),
-    }));
-    try {
-      await call('POST', '/entityOperations/upsert?options=update', body);
-    } catch (e) {
-      // broker restarting: try again next round
-      console.error(e.message || e);
-    }
-    await new Promise((r) => setTimeout(r, LIVE * 1000));
-  }
-}
-
-(LIVE > 0 ? live() : main()).catch((e) => {
+main().catch((e) => {
   console.error(e.message || e);
   process.exit(1);
 });

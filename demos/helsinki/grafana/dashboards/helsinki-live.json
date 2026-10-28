@@ -1,7 +1,7 @@
 {
   "uid": "ngsild-helsinki-live",
   "title": "NGSI-LD Helsinki live",
-  "description": "Places from OpenStreetMap, seeded air quality and live HSL trams (datasource/hsl), all read through the NGSI-LD data source.",
+  "description": "Live open data of Helsinki through the NGSI-LD data source: measured air quality (FMI), trams (HSL), events (Linked Events), places (OpenStreetMap).",
   "tags": [
     "ngsi-ld",
     "sample",
@@ -32,7 +32,7 @@
     {
       "id": 1,
       "type": "geomap",
-      "title": "Central Helsinki: places, air quality and live trams",
+      "title": "Central Helsinki: places, air quality, events and live trams with their trails",
       "datasource": {
         "type": "ngsild-grafana-datasource",
         "uid": "${ds}"
@@ -40,8 +40,8 @@
       "gridPos": {
         "x": 0,
         "y": 0,
-        "w": 12,
-        "h": 14
+        "w": 14,
+        "h": 15
       },
       "targets": [
         {
@@ -53,8 +53,7 @@
           "entityType": "Park,Zone",
           "geoLocation": "shape",
           "queryType": "geo",
-          "entityName": "name",
-          "lang": "en"
+          "entityName": "name"
         },
         {
           "refId": "B",
@@ -65,8 +64,7 @@
           "entityType": "Building",
           "geoLocation": "shape",
           "queryType": "geo",
-          "entityName": "name",
-          "lang": "en"
+          "entityName": "name"
         },
         {
           "refId": "C",
@@ -77,8 +75,7 @@
           "entityType": "Road",
           "geoLocation": "shape",
           "queryType": "geo",
-          "entityName": "name",
-          "lang": "en"
+          "entityName": "name"
         },
         {
           "refId": "D",
@@ -88,8 +85,7 @@
           },
           "entityType": "AirQualityObserved",
           "queryType": "geo",
-          "entityName": "name",
-          "lang": "en"
+          "entityName": "name"
         },
         {
           "refId": "E",
@@ -99,16 +95,36 @@
           },
           "entityType": "Vehicle",
           "queryType": "geo",
-          "entityName": "name",
-          "lang": "en"
+          "entityName": "name"
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "ngsild-grafana-datasource",
+            "uid": "${ds}"
+          },
+          "queryType": "geo",
+          "geoLocation": "trail",
+          "entityType": "Vehicle",
+          "entityName": "name"
+        },
+        {
+          "refId": "G",
+          "datasource": {
+            "type": "ngsild-grafana-datasource",
+            "uid": "${ds}"
+          },
+          "queryType": "geo",
+          "entityType": "Event",
+          "entityName": "name"
         }
       ],
       "options": {
         "view": {
           "id": "coords",
-          "lat": 60.18,
-          "lon": 24.944,
-          "zoom": 13.2
+          "lat": 60.177,
+          "lon": 24.945,
+          "zoom": 13
         },
         "controls": {
           "showZoom": true,
@@ -209,6 +225,64 @@
           },
           {
             "type": "markers",
+            "name": "Tram trails (Geo query, Location: Trail)",
+            "tooltip": true,
+            "location": {
+              "mode": "auto"
+            },
+            "filterData": {
+              "id": "byRefId",
+              "options": "F"
+            },
+            "config": {
+              "showLegend": false,
+              "style": {
+                "color": {
+                  "fixed": "purple"
+                },
+                "opacity": 0.6,
+                "lineWidth": 3,
+                "size": {
+                  "fixed": 2
+                },
+                "symbol": {
+                  "mode": "fixed",
+                  "fixed": "img/icons/marker/circle.svg"
+                }
+              }
+            }
+          },
+          {
+            "type": "markers",
+            "name": "Events (next 24 h)",
+            "tooltip": true,
+            "location": {
+              "mode": "auto"
+            },
+            "filterData": {
+              "id": "byRefId",
+              "options": "G"
+            },
+            "config": {
+              "showLegend": false,
+              "style": {
+                "color": {
+                  "fixed": "#FF4FA0"
+                },
+                "opacity": 0.9,
+                "size": {
+                  "fixed": 7
+                },
+                "symbol": {
+                  "mode": "fixed",
+                  "fixed": "img/icons/marker/circle.svg"
+                },
+                "lineWidth": 2
+              }
+            }
+          },
+          {
+            "type": "markers",
             "name": "Air quality stations",
             "tooltip": true,
             "location": {
@@ -298,136 +372,22 @@
         "tooltip": {
           "mode": "details"
         }
-      }
+      },
+      "description": "Shapes: Geo query, Location: Shape. Stations, events, trams: Geo query, Location: Point. Trails: Geo query, Location: Trail (the trams' positions in the time range from the temporal API)."
     },
     {
-      "id": 5,
-      "type": "timeseries",
-      "title": "Air quality: PM10 (temporal, demo data)",
-      "datasource": {
-        "type": "ngsild-grafana-datasource",
-        "uid": "${ds}"
-      },
+      "id": 8,
+      "type": "table",
+      "title": "Next events (Linked Events; each entity expires when the event ends)",
       "gridPos": {
-        "x": 12,
+        "x": 14,
         "y": 0,
-        "w": 12,
-        "h": 7
+        "w": 10,
+        "h": 15
       },
-      "timeFrom": "2d",
-      "hideTimeOverride": false,
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "ngsild-grafana-datasource",
-            "uid": "${ds}"
-          },
-          "queryType": "temporal",
-          "attributes": [
-            "pm10"
-          ],
-          "namePattern": "entity_name",
-          "entityType": "AirQualityObserved",
-          "entityName": "name",
-          "lang": "en"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "conμgm3",
-          "custom": {
-            "lineWidth": 2,
-            "showPoints": "never",
-            "fillOpacity": 8
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 6,
-      "type": "timeseries",
-      "title": "Air quality: NO2, 6-hour average (temporal aggregation, demo data)",
       "datasource": {
         "type": "ngsild-grafana-datasource",
         "uid": "${ds}"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 7,
-        "w": 12,
-        "h": 7
-      },
-      "timeFrom": "2d",
-      "hideTimeOverride": false,
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "ngsild-grafana-datasource",
-            "uid": "${ds}"
-          },
-          "queryType": "temporal",
-          "attributes": [
-            "no2"
-          ],
-          "aggrMethod": "avg",
-          "aggrPeriodDuration": "PT6H",
-          "namePattern": "entity_name",
-          "entityType": "AirQualityObserved",
-          "entityName": "name",
-          "lang": "en"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "conμgm3",
-          "custom": {
-            "lineWidth": 2,
-            "showPoints": "always",
-            "pointSize": 6,
-            "fillOpacity": 0
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 7,
-      "type": "bargauge",
-      "title": "Air quality now (current values, demo data)",
-      "datasource": {
-        "type": "ngsild-grafana-datasource",
-        "uid": "${ds}"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 14,
-        "w": 8,
-        "h": 8
       },
       "targets": [
         {
@@ -437,22 +397,179 @@
             "uid": "${ds}"
           },
           "queryType": "entity",
+          "format": "table",
+          "entityType": "Event",
           "attributes": [
-            "pm10",
-            "pm25",
-            "no2"
+            "name",
+            "startDate",
+            "venue",
+            "category"
           ],
-          "namePattern": "entity_plus_attribute",
+          "ngsildOptions": [
+            "sysAttrs"
+          ],
+          "limit": 100
+        }
+      ],
+      "transformations": [
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "startDate",
+                "destinationType": "time"
+              }
+            ]
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "startDate"
+              }
+            ]
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "id": true,
+              "type": true
+            },
+            "indexByName": {
+              "startDate": 0,
+              "expiresAt": 1,
+              "name": 2,
+              "venue": 3,
+              "category": 4
+            },
+            "renameByName": {
+              "startDate": "Starts",
+              "expiresAt": "Ends (expiresAt)",
+              "name": "Event",
+              "venue": "Venue",
+              "category": "Category"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Starts"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeAsLocalNoDateIfToday"
+              },
+              {
+                "id": "custom.width",
+                "value": 105
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ends (expiresAt)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeAsLocalNoDateIfToday"
+              },
+              {
+                "id": "custom.width",
+                "value": 105
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "id": 9,
+      "type": "bargauge",
+      "title": "Air quality index now (FMI, measured)",
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 8,
+        "h": 9
+      },
+      "datasource": {
+        "type": "ngsild-grafana-datasource",
+        "uid": "${ds}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "ngsild-grafana-datasource",
+            "uid": "${ds}"
+          },
+          "queryType": "entity",
           "entityType": "AirQualityObserved",
+          "attributes": [
+            "airQualityIndex"
+          ],
           "entityName": "name",
-          "lang": "en"
+          "namePattern": "entity_name"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "conμgm3",
           "min": 0,
-          "max": 60,
+          "max": 5,
+          "decimals": 0,
+          "unit": "none",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "Good",
+                  "color": "green",
+                  "index": 0
+                },
+                "2": {
+                  "text": "Satisfactory",
+                  "color": "yellow",
+                  "index": 1
+                },
+                "3": {
+                  "text": "Fair",
+                  "color": "orange",
+                  "index": 2
+                },
+                "4": {
+                  "text": "Poor",
+                  "color": "red",
+                  "index": 3
+                },
+                "5": {
+                  "text": "Very poor",
+                  "color": "purple",
+                  "index": 4
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -462,11 +579,19 @@
               },
               {
                 "color": "yellow",
-                "value": 25
+                "value": 2
+              },
+              {
+                "color": "orange",
+                "value": 3
               },
               {
                 "color": "red",
-                "value": 40
+                "value": 4
+              },
+              {
+                "color": "purple",
+                "value": 5
               }
             ]
           }
@@ -475,8 +600,10 @@
       },
       "options": {
         "orientation": "horizontal",
-        "displayMode": "gradient",
+        "displayMode": "basic",
         "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "left",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -484,6 +611,277 @@
           "fields": "",
           "values": false
         }
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "PM2.5, last 48 h (temporal, FMI)",
+      "gridPos": {
+        "x": 8,
+        "y": 15,
+        "w": 8,
+        "h": 9
+      },
+      "datasource": {
+        "type": "ngsild-grafana-datasource",
+        "uid": "${ds}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "ngsild-grafana-datasource",
+            "uid": "${ds}"
+          },
+          "queryType": "temporal",
+          "entityType": "AirQualityObserved",
+          "attributes": [
+            "pm25"
+          ],
+          "entityName": "name",
+          "namePattern": "entity_name"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "timeFrom": "2d"
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "NO2, 6-hour average (temporal aggregation, FMI)",
+      "gridPos": {
+        "x": 16,
+        "y": 15,
+        "w": 8,
+        "h": 9
+      },
+      "datasource": {
+        "type": "ngsild-grafana-datasource",
+        "uid": "${ds}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "ngsild-grafana-datasource",
+            "uid": "${ds}"
+          },
+          "queryType": "temporal",
+          "entityType": "AirQualityObserved",
+          "attributes": [
+            "no2"
+          ],
+          "aggrMethod": "avg",
+          "aggrPeriodDuration": "PT6H",
+          "entityName": "name",
+          "namePattern": "entity_name"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "lineInterpolation": "stepAfter"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "timeFrom": "2d"
+    },
+    {
+      "id": 12,
+      "type": "state-timeline",
+      "title": "Air quality index per station, last 48 h (temporal, FMI)",
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "ngsild-grafana-datasource",
+        "uid": "${ds}"
+      },
+      "timeFrom": "2d",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "ngsild-grafana-datasource",
+            "uid": "${ds}"
+          },
+          "queryType": "temporal",
+          "entityType": "AirQualityObserved",
+          "attributes": [
+            "airQualityIndex"
+          ],
+          "entityName": "name",
+          "namePattern": "entity_name"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "Good",
+                  "color": "green",
+                  "index": 0
+                },
+                "2": {
+                  "text": "Satisfactory",
+                  "color": "yellow",
+                  "index": 1
+                },
+                "3": {
+                  "text": "Fair",
+                  "color": "orange",
+                  "index": 2
+                },
+                "4": {
+                  "text": "Poor",
+                  "color": "red",
+                  "index": 3
+                },
+                "5": {
+                  "text": "Very poor",
+                  "color": "purple",
+                  "index": 4
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 2
+              },
+              {
+                "color": "orange",
+                "value": 3
+              },
+              {
+                "color": "red",
+                "value": 4
+              },
+              {
+                "color": "purple",
+                "value": 5
+              }
+            ]
+          },
+          "custom": {
+            "fillOpacity": 85,
+            "lineWidth": 0
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showValue": "never",
+        "mergeValues": true,
+        "rowHeight": 0.85,
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "nodeGraph",
+      "title": "Trams, their lines and the operator (node graph)",
+      "gridPos": {
+        "x": 0,
+        "y": 41,
+        "w": 12,
+        "h": 19
+      },
+      "datasource": {
+        "type": "ngsild-grafana-datasource",
+        "uid": "${ds}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "ngsild-grafana-datasource",
+            "uid": "${ds}"
+          },
+          "queryType": "nodegraph",
+          "entityType": "Vehicle",
+          "entityName": "name",
+          "primaryNodeAttributes": {
+            "Vehicle": [
+              "speed"
+            ]
+          },
+          "secondaryNodeAttributes": {
+            "Vehicle": [
+              "delay"
+            ]
+          },
+          "graphDepth": 2,
+          "limit": 4
+        }
+      ],
+      "description": "4 Vehicle entities (query limit), the PublicTransportRoute entities their route relationship points to, and the operator they point to.",
+      "options": {
+        "nodes": {},
+        "edges": {},
+        "layoutAlgorithm": "layered",
+        "zoomMode": "cooperative"
       }
     },
     {
@@ -495,9 +893,9 @@
         "uid": "${ds}"
       },
       "gridPos": {
-        "x": 8,
-        "y": 14,
-        "w": 8,
+        "x": 0,
+        "y": 33,
+        "w": 12,
         "h": 8
       },
       "targets": [
@@ -547,9 +945,9 @@
         "uid": "${ds}"
       },
       "gridPos": {
-        "x": 16,
-        "y": 14,
-        "w": 8,
+        "x": 12,
+        "y": 33,
+        "w": 12,
         "h": 8
       },
       "targets": [
@@ -591,18 +989,153 @@
       }
     },
     {
+      "id": 14,
+      "type": "piechart",
+      "title": "Next events by category (current values, grouped)",
+      "gridPos": {
+        "x": 12,
+        "y": 24,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "ngsild-grafana-datasource",
+        "uid": "${ds}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "ngsild-grafana-datasource",
+            "uid": "${ds}"
+          },
+          "queryType": "entity",
+          "format": "table",
+          "entityType": "Event",
+          "attributes": [
+            "category"
+          ],
+          "limit": 100
+        }
+      ],
+      "transformations": [
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "category": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "id": {
+                "aggregations": [
+                  "count"
+                ],
+                "operation": "aggregate"
+              }
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "id (count)",
+                "desc": true
+              }
+            ]
+          }
+        },
+        {
+          "id": "limit",
+          "options": {
+            "limitField": 8
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "pieType": "donut",
+        "displayLabels": [
+          "value"
+        ],
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value"
+          ]
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      }
+    },
+    {
+      "id": 15,
+      "type": "nodeGraph",
+      "title": "Next events, their venues and the city (node graph)",
+      "gridPos": {
+        "x": 12,
+        "y": 41,
+        "w": 12,
+        "h": 19
+      },
+      "datasource": {
+        "type": "ngsild-grafana-datasource",
+        "uid": "${ds}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "ngsild-grafana-datasource",
+            "uid": "${ds}"
+          },
+          "queryType": "nodegraph",
+          "entityType": "Event",
+          "entityName": "name",
+          "graphDepth": 2,
+          "limit": 4
+        }
+      ],
+      "description": "4 Event entities (query limit), the PointOfInterest entities their refPointOfInterest points to, and the City they point to.",
+      "options": {
+        "nodes": {},
+        "edges": {},
+        "layoutAlgorithm": "layered",
+        "zoomMode": "cooperative"
+      }
+    },
+    {
       "id": 4,
       "type": "table",
-      "title": "Trams now (current values, entities expire 8 minutes after their last update)",
+      "title": "Trams now (current values; expiresAt 8 minutes after the last update)",
       "datasource": {
         "type": "ngsild-grafana-datasource",
         "uid": "${ds}"
       },
       "gridPos": {
         "x": 0,
-        "y": 22,
+        "y": 60,
         "w": 24,
-        "h": 7
+        "h": 9
       },
       "targets": [
         {
@@ -620,6 +1153,9 @@
             "speed",
             "heading",
             "delay"
+          ],
+          "ngsildOptions": [
+            "sysAttrs"
           ]
         }
       ],
@@ -629,12 +1165,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "speed"
+              "options": "Expires (expiresAt)"
             },
             "properties": [
               {
                 "id": "unit",
-                "value": "velocityms"
+                "value": "dateTimeAsLocalNoDateIfToday"
               }
             ]
           }
@@ -642,7 +1178,34 @@
       },
       "options": {
         "showHeader": true
-      }
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "id": true,
+              "type": true
+            },
+            "indexByName": {
+              "name": 0,
+              "line": 1,
+              "speed": 2,
+              "heading": 3,
+              "delay": 4,
+              "expiresAt": 5
+            },
+            "renameByName": {
+              "name": "Tram",
+              "line": "Line",
+              "speed": "Speed",
+              "heading": "Heading",
+              "delay": "Delay",
+              "expiresAt": "Expires (expiresAt)"
+            }
+          }
+        }
+      ]
     }
   ]
 }

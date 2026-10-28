@@ -42,6 +42,7 @@ import {
   pageCut,
   Series,
   seriesToFrames,
+  seriesToTrails,
   temporalNames,
 } from './frames';
 import { DEFAULT_GRAPH_DEPTH, resolveRelated, toNodeGraph } from './NodeGraphHandler';
@@ -195,7 +196,13 @@ export class NgsildDataSource extends DataSourceApi<NgsildQuery, NgsildSourceOpt
   /** First request a query sends; shown in the query editor. */
   previewRequest(q: NgsildQuery, from?: number, to?: number, intervalMs?: number): NgsildRequest {
     const resolved = this.applyTemplateVariables(q, {});
-    return buildRequest(resolved.queryType === NgsildQueryType.NODE_GRAPH ? nodeGraphQuery(resolved) : resolved, {
+    const sent =
+      resolved.queryType === NgsildQueryType.NODE_GRAPH
+        ? nodeGraphQuery(resolved)
+        : resolved.queryType === NgsildQueryType.GEO && resolved.geoLocation === 'trail'
+          ? trailQuery(resolved)
+          : resolved;
+    return buildRequest(sent, {
       from,
       to,
       intervalMs,
@@ -280,6 +287,11 @@ export class NgsildDataSource extends DataSourceApi<NgsildQuery, NgsildSourceOpt
       case NgsildQueryType.TEMPORAL:
         return this.runTemporal(q, from, to, request.intervalMs, signal);
       case NgsildQueryType.GEO: {
+        if (q.geoLocation === 'trail') {
+          return this.runTemporal(trailQuery(q), from, to, request.intervalMs, signal, (series, tq, names) => [
+            seriesToTrails(series, tq, names),
+          ]);
+        }
         const { entities, notices } = await this.fetchEntities(q, signal);
         if (entities.length === 0) {
           notices.push(await this.noEntitiesNotice(q));
@@ -357,7 +369,8 @@ export class NgsildDataSource extends DataSourceApi<NgsildQuery, NgsildSourceOpt
     from?: number,
     to?: number,
     intervalMs?: number,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    toFrames: (series: Iterable<Series>, q: NgsildQuery, names: Map<string, unknown>) => DataFrame[] = seriesToFrames
   ): Promise<DataFrame[]> {
     const limit = q.limit && q.limit > 0 ? q.limit : DEFAULT_LIMIT;
     const { path, params } = buildRequest(q, { from, to, intervalMs, pageSize: Math.min(this.pageSize, limit) });
@@ -421,7 +434,7 @@ export class NgsildDataSource extends DataSourceApi<NgsildQuery, NgsildSourceOpt
       );
     }
     await this.fillFromCurrent(run).catch(() => undefined); // units and names are cosmetic; never fail the query on them
-    return withNotices(capFrames(seriesToFrames(run.series.values(), q, run.names), run.notices), run.notices, q.refId);
+    return withNotices(capFrames(toFrames(run.series.values(), q, run.names), run.notices), run.notices, q.refId);
   }
 
   /**
@@ -781,6 +794,17 @@ interface TemporalRun {
 function resultsCount(res: FetchResponse<unknown>): number | undefined {
   const n = Number((res.headers as Headers | undefined)?.get?.('NGSILD-Results-Count') ?? NaN);
   return Number.isFinite(n) ? n : undefined;
+}
+
+/** A Geo query with Location: Trail as the temporal query of its location attribute. */
+export function trailQuery(q: NgsildQuery): NgsildQuery {
+  return {
+    ...q,
+    queryType: NgsildQueryType.TEMPORAL,
+    attributes: [q.geoproperty || 'location'],
+    aggrMethod: undefined,
+    aggrPeriodDuration: undefined,
+  };
 }
 
 /**

@@ -123,7 +123,8 @@ export interface NgsildQuery extends DataQuery {
   limit?: number;
 }
 
-export type GeoLocation = 'point' | 'shape';
+/** point: a marker per entity; shape: the geometry; trail: the positions in the time range (temporal API). */
+export type GeoLocation = 'point' | 'shape' | 'trail';
 
 export const DEFAULT_QUERY: Partial<NgsildQuery> = {
   queryType: NgsildQueryType.TEMPORAL,

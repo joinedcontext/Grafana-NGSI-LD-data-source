@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // Feeds a few live Helsinki vehicles from HSL's public MQTT feed (high-frequency positioning,
 // https://digitransit.fi/en/developers/apis/5-realtime-api/vehicle-positions/high-frequency-positioning/)
-// into an NGSI-LD broker as Vehicle entities. Every write sets expiresAt EXPIRES_MINUTES ahead: a vehicle
-// that stops reporting drops out of the current state, its history stays in the temporal API.
+// into an NGSI-LD broker as Vehicle entities, each linked to a PublicTransportRoute for its line. Every
+// write sets expiresAt EXPIRES_MINUTES ahead: a vehicle that stops reporting drops out of the current
+// state, its history stays in the temporal API.
 //
 //   BROKER_URL=http://localhost:9090 node hsl.mjs
 //
@@ -10,11 +11,9 @@
 // UPDATE_SECONDS (15), EXPIRES_MINUTES (8).
 
 import mqtt from 'mqtt';
-import { pathToFileURL } from 'node:url';
+import { BROKER, isMain, upsert } from './ngsild.mjs';
 
 const env = process.env;
-const BROKER = (env.BROKER_URL || 'http://localhost:9090').replace(/\/$/, '');
-const TENANT = env.TENANT || '';
 const MQTT_URL = env.MQTT_URL || 'mqtts://mqtt.hsl.fi:8883';
 const TOPIC = env.HSL_TOPIC || '/hfp/v2/journey/ongoing/vp/tram/#';
 const VEHICLES = Number(env.VEHICLES || 8);
@@ -38,13 +37,46 @@ export function toEntity(vp, mode, expiresAt) {
     expiresAt,
     name: { type: 'Property', value: vp.desi ? `${label} ${vp.desi} (${vp.veh})` : `${label} ${vp.veh}` },
     vehicleType: { type: 'Property', value: mode || 'unknown' },
-    ...(vp.desi ? { line: { type: 'Property', value: String(vp.desi) } } : {}),
+    ...(vp.desi
+      ? {
+          line: { type: 'Property', value: String(vp.desi) },
+          route: { type: 'Relationship', object: routeId(mode, vp.desi) },
+        }
+      : {}),
     location: { type: 'GeoProperty', value: { type: 'Point', coordinates: [vp.long, vp.lat] }, observedAt },
     // undefined members drop out of the JSON body
     speed: prop(vp.spd, 'MTS'),
     heading: prop(vp.hdg, 'DD'),
     // HFP dl is ahead of schedule in seconds; delay is the opposite, late > 0
     delay: prop(Number.isFinite(vp.dl) ? -vp.dl : undefined, 'SEC'),
+  };
+}
+
+const routeId = (mode, line) => `urn:ngsi-ld:PublicTransportRoute:HSL-${mode || 'vehicle'}-${line}`;
+
+export const OPERATOR = {
+  id: 'urn:ngsi-ld:Organization:HSL',
+  type: 'Organization',
+  name: { type: 'Property', value: 'HSL (Helsinki Regional Transport Authority)' },
+};
+
+/**
+ * The line a vehicle entity's `route` points to; each line points to the operator, so the node graph is
+ * one tree. Undefined without a line.
+ */
+export function toRoute(vehicle, mode, expiresAt) {
+  const line = vehicle.line?.value;
+  if (line === undefined) {
+    return undefined;
+  }
+  const label = mode ? mode[0].toUpperCase() + mode.slice(1) : 'Line';
+  return {
+    id: routeId(mode, line),
+    type: 'PublicTransportRoute',
+    expiresAt,
+    name: { type: 'Property', value: `${label} ${line}` },
+    routeType: { type: 'Property', value: mode || 'unknown' },
+    operator: { type: 'Relationship', object: OPERATOR.id },
   };
 }
 
@@ -76,17 +108,6 @@ export function createTracker(max, everyMs, silentMs) {
   };
 }
 
-async function upsert(entities) {
-  const res = await fetch(`${BROKER}/ngsi-ld/v1/entityOperations/upsert?options=update`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(TENANT ? { 'NGSILD-Tenant': TENANT } : {}) },
-    body: JSON.stringify(entities),
-  });
-  if (!res.ok) {
-    throw new Error(`upsert -> ${res.status} ${await res.text()}`);
-  }
-}
-
 function main() {
   const tracker = createTracker(VEHICLES, UPDATE_MS, SILENT_MS);
   const pending = new Map();
@@ -107,9 +128,16 @@ function main() {
     }
     const now = Date.now();
     // /hfp/v2/journey/ongoing/vp/<mode>/...
-    const entity = toEntity(vp, topic.split('/')[6], new Date(now + EXPIRES_MS).toISOString());
+    const mode = topic.split('/')[6];
+    const expiresAt = new Date(now + EXPIRES_MS).toISOString();
+    const entity = toEntity(vp, mode, expiresAt);
     if (entity && tracker.accept(entity.id, now)) {
       pending.set(entity.id, entity);
+      const route = toRoute(entity, mode, expiresAt);
+      if (route) {
+        pending.set(route.id, route);
+        pending.set(OPERATOR.id, OPERATOR);
+      }
     }
   });
 
@@ -121,7 +149,7 @@ function main() {
     pending.clear();
     try {
       await upsert(batch);
-      written += batch.length;
+      written += batch.filter((e) => e.type === 'Vehicle').length;
     } catch (err) {
       console.error(err.message);
     }
@@ -137,6 +165,6 @@ function main() {
   process.on('SIGINT', stop);
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMain(import.meta.url)) {
   main();
 }

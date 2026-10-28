@@ -225,11 +225,23 @@ function valueField(name: string, values: unknown[], config: Field['config'], la
   return { name, type, values: normalizeValues(values, type) as any[], config, labels };
 }
 
-/** One [Time, value] frame per series, points in time order. */
+/** The positions of a GeoProperty history, null for a gap; undefined when a value is no geometry. */
+function trackOf(values: unknown[]): Array<[number, number] | null> | undefined {
+  const points = values.map((v) => (v === null || v === undefined ? null : representativePoint(v)));
+  return points.some((p) => p === undefined) || points.every((p) => p === null)
+    ? undefined
+    : (points as Array<[number, number] | null>);
+}
+
+/**
+ * One [Time, value] frame per series, points in time order. A GeoProperty history becomes
+ * [Time, latitude, longitude], the track that Geomap's route layer draws.
+ */
 export function seriesToFrames(series: Iterable<Series>, q: NgsildQuery, names: Map<string, unknown>): DataFrame[] {
   const frames: DataFrame[] = [];
   for (const s of series) {
     const times = [...s.points.keys()].sort((a, b) => a - b);
+    const values = times.map((t) => s.points.get(t));
     const label = entityLabel({ id: s.entityId, type: s.entityType }, q, names.get(s.entityId));
     const labels: Record<string, string> = { entity: s.entityId, type: s.entityType };
     if (s.datasetId) {
@@ -238,26 +250,81 @@ export function seriesToFrames(series: Iterable<Series>, q: NgsildQuery, names: 
     if (s.method) {
       labels.aggregation = s.method;
     }
+    const track = trackOf(values);
+    const coordinate = (name: string, axis: 0 | 1): Field => ({
+      name,
+      type: FieldType.number,
+      values: track!.map((p) => (p ? p[axis] : null)),
+      config: { displayNameFromDS: displayName(q, label, name, s.datasetId, s.method) },
+      labels,
+    });
     frames.push(
       createDataFrame({
         refId: q.refId,
         name: label,
         fields: [
           { name: 'Time', type: FieldType.time, values: times, config: {} },
-          valueField(
-            s.attr,
-            times.map((t) => s.points.get(t)),
-            {
-              displayNameFromDS: displayName(q, label, s.attr, s.datasetId, s.method),
-              unit: unitFor(s.unitCode, s.method),
-            },
-            labels
-          ),
+          ...(track
+            ? [coordinate('latitude', 1), coordinate('longitude', 0)]
+            : [
+                valueField(
+                  s.attr,
+                  values,
+                  {
+                    displayNameFromDS: displayName(q, label, s.attr, s.datasetId, s.method),
+                    unit: unitFor(s.unitCode, s.method),
+                  },
+                  labels
+                ),
+              ]),
         ],
       })
     );
   }
   return frames;
+}
+
+/**
+ * GeoProperty histories as one Geomap frame, a row per series: the track as a geo field (a LineString,
+ * a Point while it has one position) that the markers layer draws, the newest position as latitude and
+ * longitude, and its time. Series that are no geometry history are left out.
+ */
+export function seriesToTrails(series: Iterable<Series>, q: NgsildQuery, names: Map<string, unknown>): DataFrame {
+  const rows: Array<{ s: Series; label: string; positions: Array<[number, number]>; time: number }> = [];
+  for (const s of series) {
+    const times = [...s.points.keys()].sort((a, b) => a - b);
+    const track = trackOf(times.map((t) => s.points.get(t)));
+    const timed = (track ?? []).flatMap((p, i) => (p ? [{ p, t: times[i] }] : []));
+    if (timed.length > 0) {
+      const label = entityLabel({ id: s.entityId, type: s.entityType }, q, names.get(s.entityId));
+      rows.push({ s, label, positions: timed.map((x) => x.p), time: timed[timed.length - 1].t });
+    }
+  }
+  const last = (r: (typeof rows)[number]) => r.positions[r.positions.length - 1];
+  return createDataFrame({
+    refId: q.refId,
+    fields: [
+      { name: 'name', type: FieldType.string, values: rows.map((r) => r.label), config: {} },
+      { name: 'id', type: FieldType.string, values: rows.map((r) => r.s.entityId), config: {} },
+      { name: 'type', type: FieldType.string, values: rows.map((r) => r.s.entityType), config: {} },
+      { name: 'time', type: FieldType.time, values: rows.map((r) => r.time), config: {} },
+      { name: 'latitude', type: FieldType.number, values: rows.map((r) => last(r)[1]), config: {} },
+      { name: 'longitude', type: FieldType.number, values: rows.map((r) => last(r)[0]), config: {} },
+      { name: 'positions', type: FieldType.number, values: rows.map((r) => r.positions.length), config: {} },
+      {
+        name: 'geometry',
+        type: FieldType.geo,
+        values: rows.map((r) =>
+          mapGeometry(
+            r.positions.length > 1
+              ? { type: 'LineString', coordinates: r.positions }
+              : { type: 'Point', coordinates: r.positions[0] }
+          )
+        ),
+        config: {},
+      },
+    ],
+  });
 }
 
 const timeOf = (inst: any, fallback: number): number => {
@@ -349,12 +416,24 @@ const columnField = (c: Column): Field =>
 
 /** Current values as one table: a row per entity, a column per attribute. */
 export function entitiesToTable(entities: Entity[], q: NgsildQuery): DataFrame {
+  // an entity member (CIM 009 4.5.1), not an attribute; brokers may send it only with sysAttrs
+  const expires = entities.map((e) => (typeof e.expiresAt === 'string' ? Date.parse(e.expiresAt) : NaN));
   return createDataFrame({
     refId: q.refId,
     meta: { preferredVisualisationType: 'table' },
     fields: [
       { name: 'id', type: FieldType.string, values: entities.map((e) => e.id), config: {} },
       { name: 'type', type: FieldType.string, values: entities.map(typeOf), config: {} },
+      ...(expires.some(Number.isFinite)
+        ? [
+            {
+              name: 'expiresAt',
+              type: FieldType.time,
+              values: expires.map((t) => (Number.isFinite(t) ? t : null)),
+              config: {},
+            },
+          ]
+        : []),
       ...attributeColumns(entities, q, []).map(columnField),
     ],
   });

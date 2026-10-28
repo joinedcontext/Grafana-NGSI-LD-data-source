@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { createTracker, toEntity } from './hsl.mjs';
+import { createTracker, toEntity, toRoute } from './hsl.mjs';
 
 // a real HFP message (mqtt.hsl.fi, tram 7)
 const VP = {
@@ -20,6 +20,7 @@ test('maps a vehicle position to an NGSI-LD Vehicle', () => {
     name: { type: 'Property', value: 'Tram 7 (422)' },
     vehicleType: { type: 'Property', value: 'tram' },
     line: { type: 'Property', value: '7' },
+    route: { type: 'Relationship', object: 'urn:ngsi-ld:PublicTransportRoute:HSL-tram-7' },
     location: { type: 'GeoProperty', value: { type: 'Point', coordinates: [24.96335, 60.190195] }, observedAt: VP.tst },
     speed: { type: 'Property', value: 4.97, unitCode: 'MTS', observedAt: VP.tst },
     heading: { type: 'Property', value: 324, unitCode: 'DD', observedAt: VP.tst },
@@ -34,6 +35,8 @@ test('leaves out measurements HFP sends as null', () => {
   assert.equal(e.heading, undefined);
   assert.equal(e.delay, undefined);
   assert.equal(e.line, undefined);
+  assert.equal(e.route, undefined);
+  assert.equal(toRoute(e, 'bus', EXP), undefined);
   assert.equal(e.name.value, 'Bus 422');
 });
 
@@ -73,4 +76,15 @@ test('gives the slot of a silent vehicle to the next one', () => {
   assert.equal(t.accept('b', 60_000), false, 'a is not silent long enough yet');
   assert.equal(t.accept('b', 60_001), true);
   assert.equal(t.accept('a', 60_002), false, 'a lost its slot');
+});
+
+test('gives the line its own entity with the vehicle expiry', () => {
+  assert.deepEqual(toRoute(toEntity(VP, 'tram', EXP), 'tram', EXP), {
+    id: 'urn:ngsi-ld:PublicTransportRoute:HSL-tram-7',
+    type: 'PublicTransportRoute',
+    expiresAt: EXP,
+    name: { type: 'Property', value: 'Tram 7' },
+    routeType: { type: 'Property', value: 'tram' },
+    operator: { type: 'Relationship', object: 'urn:ngsi-ld:Organization:HSL' },
+  });
 });

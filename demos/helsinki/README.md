@@ -1,7 +1,8 @@
 # Helsinki demo
 
-The NGSI-LD data source on one dashboard: places and air quality in central Helsinki, and trams that move
-live on the map. Needs Docker with Compose and internet access for the tram feed.
+The NGSI-LD data source on one dashboard, fed with live open data of Helsinki: measured air quality,
+trams on the move, the next day's events and places in the city centre. Needs Docker with Compose and
+internet access for the feeds.
 
 ```bash
 docker compose up -d
@@ -14,29 +15,41 @@ http://localhost:3000. `docker compose down` stops the demo.
 | Service | Purpose |
 |---|---|
 | `antares` | `ghcr.io/joinedcontext/antares-broker`, NGSI-LD API on http://localhost:9090/ngsi-ld/v1 |
-| `seed` | Runs `../../datasource/seed/seed.mjs` on every `up`: three air quality stations with 48 h of hourly history ending now, City Hall, Helsinki Cathedral, Mannerheimintie, Senate Square, Esplanadi and Kaisaniemi park |
-| `stations` | Keeps the three stations live: a new value of every air quality attribute each minute, on the same curves as the history |
-| `hsl` | Reads HSL's public vehicle positions (`mqtts://mqtt.hsl.fi:8883`, trams) and writes up to 8 trams as `Vehicle` entities, each with `expiresAt` 8 minutes ahead |
+| `seed` | Runs `../../datasource/seed/seed.mjs --places-only` on every `up`: City Hall, Helsinki Cathedral, Mannerheimintie, Senate Square, Esplanadi and Kaisaniemi park |
+| `air` | `feeds/fmi.mjs`: the air quality stations of the Finnish Meteorological Institute in Helsinki, Espoo and Vantaa as `AirQualityObserved` entities, with 48 h of hourly history on start and each new hour after |
+| `hsl` | `feeds/hsl.mjs`: HSL's public vehicle positions (`mqtts://mqtt.hsl.fi:8883`, trams), up to 8 trams as `Vehicle` entities linked to their line (`PublicTransportRoute`) and the operator, each with `expiresAt` 8 minutes ahead |
+| `events` | `feeds/events.mjs`: the next 24 h of events in central Helsinki from Linked Events as `Event` entities, linked to their venue (`PointOfInterest`) and the venues to the `City`; each expires when it ends |
 | `grafana` | `grafana/grafana` with the plugin from the release, the data source and the dashboard `grafana/dashboards/helsinki-live.json` |
 
 ## Dashboard
 
-- **Map**: parks and Senate Square, buildings, Mannerheimintie (Geo, *Location: Shape*), the stations
-  and the trams, each tram turned to its heading and labelled with its line.
-- **Air quality**: PM10 history, the 6-hour NO2 average (temporal aggregation) and the current values.
-  The air quality data is generated, not measured: hourly for two days, then every minute.
+- **Map**: parks, squares, buildings and Mannerheimintie (Geo, *Location: Shape*), the air quality
+  stations, the venues of the next events, and the trams turned to their heading and labelled with their
+  line. Each tram draws its trail of the time range (Geo, *Location: Trail*: the positions from the
+  temporal API as one line per tram).
+- **Next events**: table of the events with start, end (`expiresAt`), venue and category, and a pie chart
+  by category.
+- **Air quality**: the current index per station, PM2.5 history, the 6-hour NO2 average (temporal
+  aggregation) and the index of each station over two days as a state timeline, in FMI's colours.
 - **Trams**: speed and delay history (temporal) and a table of the trams on the broker now.
+- **Node graphs**: trams, their lines and the operator; events, their venues and the city.
 
 The dashboard refreshes every 10 seconds and shows the last 15 minutes; the air quality panels show the
 last two days.
 
-## Trams and expiresAt
+## Feeds and expiresAt
 
-`hsl/hsl.mjs` follows the first 8 trams it sees. At most every 15 seconds per tram it upserts the position,
-speed, heading, delay and line, and moves `expiresAt` 8 minutes ahead. A tram that stops reporting is
-removed by the broker 8 minutes after its last update, so the map and the table only show trams in
-service; its history stays and the temporal panels keep it. A tram silent for a minute gives its slot to
-the next one.
+`expiresAt` keeps the broker to what is current: the broker removes an entity once the time passes, and
+its history stays, so the map and the tables only show trams in service and events still to come while
+the temporal panels keep everything.
+
+- `hsl` follows the first 8 trams it sees. At most every 15 seconds per tram it upserts the position,
+  speed, heading, delay and line, and moves `expiresAt` 8 minutes ahead. A tram silent for a minute gives
+  its slot to the next one.
+- `events` reads Linked Events every 15 minutes. An event expires at its end (or 3 hours after its start
+  when it has none); a venue at the end of its last event.
+- `air` replaces the stations and their history on start, then asks FMI every 10 minutes for new hours.
+  FMI publishes each hour within about an hour, so the newest values lag behind the clock.
 
 | Variable (`.env` next to `docker-compose.yml`) | Default | Meaning |
 |---|---|---|
@@ -45,24 +58,27 @@ the next one.
 | `GRAFANA_PORT`, `BROKER_PORT` | 3000, 9090 | host ports |
 | `BIND_ADDRESS` | 127.0.0.1 | `0.0.0.0` publishes the ports on every interface |
 | `GRAFANA_VERSION` | 12.3.0 | Grafana release (also tested: 13.2.4) |
-| `NGSILD_PLUGIN_URL` | newest release zip | plugin zip, e.g. `https://github.com/joinedcontext/Grafana-NGSI-LD-data-source/releases/download/v8.0.0/ngsild-grafana-datasource.zip` |
+| `NGSILD_PLUGIN_URL` | newest release zip | plugin zip, e.g. `https://github.com/joinedcontext/Grafana-NGSI-LD-data-source/releases/download/v8.1.0/ngsild-grafana-datasource.zip` |
+
+The feeds also read `FMI_PLACE`, `HISTORY_HOURS`, `POLL_MINUTES`, `EVENTS_HOURS`, `EVENTS_MAX` and
+`EVENTS_BBOX` (see the head of each script); set them under `environment` in `docker-compose.yml`.
 
 Grafana logs everyone in as admin and Antares authenticates nobody, so publish the ports only on a trusted
 network.
 
-## Refreshing the data
+## Troubleshooting
 
-The seed writes 48 hourly values ending at the hour it runs; `stations` adds a value per minute from then
-on, so a new panel with any time range, *Last 5 minutes* included, shows the stations.
-`docker compose run --rm seed` writes fresh history. `docker compose logs hsl`
-shows the tram feed: once a minute, the trams followed and the updates written.
+`docker compose logs air hsl events` shows what each feed wrote. `docker compose restart air` writes fresh
+air quality history, `docker compose run --rm seed` rewrites the places.
 
-Tests of the tram feed: `cd hsl && npm ci --ignore-scripts && npm test`.
+Tests of the feeds: `cd feeds && npm ci --ignore-scripts && npm test`.
 
 To try unreleased plugin code, use the development stack in `../../datasource`, which builds the plugin
 from source.
 
 ## Data
 
+- Air quality: Finnish Meteorological Institute open data, CC BY 4.0.
 - Tram positions: Helsinki Regional Transport Authority (HSL) high-frequency positioning, CC BY 4.0.
+- Events: City of Helsinki Linked Events, CC BY 4.0.
 - Shapes: © OpenStreetMap contributors, ODbL, simplified.

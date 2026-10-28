@@ -445,13 +445,14 @@ export function QueryEditor({ query, datasource, onChange, onRunQuery, range, da
           <InlineField
             label="Location"
             labelWidth={LW}
-            tooltip="Point: one marker per entity, lines and polygons at their centre. Shape: the GeoJSON geometry as it is."
+            tooltip="Point: one marker per entity, lines and polygons at their centre. Shape: the GeoJSON geometry as it is. Trail: the positions in the time range (temporal API) as a line."
           >
             <RadioButtonGroup<GeoLocation>
               aria-label="Location"
               options={[
                 { value: 'point', label: 'Point' },
                 { value: 'shape', label: 'Shape' },
+                { value: 'trail', label: 'Trail' },
               ]}
               value={q.geoLocation ?? 'point'}
               onChange={(v) => update({ geoLocation: v })}

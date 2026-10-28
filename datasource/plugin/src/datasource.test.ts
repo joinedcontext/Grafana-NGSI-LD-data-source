@@ -864,6 +864,40 @@ describe('geo queries', () => {
     expect(calls[0].params.attrs).toBe('pm10,location');
     expect(res.data[0].fields.find((f: any) => f.name === 'latitude').values).toEqual([2]);
   });
+
+  it('draws trails from the temporal history of the location (Location: Trail)', async () => {
+    const point = (lon: number, lat: number) => ({ type: 'Point', coordinates: [lon, lat] });
+    const calls = serve(() => ({
+      data: [
+        {
+          id: 'urn:x:V1',
+          type: 'Vehicle',
+          location: {
+            type: 'GeoProperty',
+            values: [
+              [point(24.94, 60.16), '2026-10-28T10:00:00Z'],
+              [point(24.95, 60.17), '2026-10-28T10:01:00Z'],
+            ],
+          },
+        },
+      ],
+    }));
+    const q = {
+      queryType: NgsildQueryType.GEO,
+      geoLocation: 'trail' as const,
+      entityType: 'Vehicle',
+      attributes: ['speed'],
+    };
+    const res = await query(makeDs(), request([q]));
+    expect(calls[0].path).toBe('/temporal/entities');
+    expect(calls[0].params.attrs).toBe('location');
+    expect(res.data).toHaveLength(1);
+    const frame = res.data[0];
+    expect(frame.fields.find((f: any) => f.name === 'latitude').values).toEqual([60.17]);
+    expect(frame.fields.find((f: any) => f.name === 'positions').values).toEqual([2]);
+    expect(frame.fields.find((f: any) => f.name === 'geometry').values[0].getType()).toBe('LineString');
+    expect(makeDs().previewRequest(q as any).path).toBe('/temporal/entities');
+  });
 });
 
 describe('empty answers', () => {

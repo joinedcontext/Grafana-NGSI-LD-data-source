@@ -1,0 +1,12 @@
+{
+  "name": "ngsild-helsinki-feeds",
+  "private": true,
+  "description": "Live Helsinki open data (HSL trams, FMI air quality, Linked Events) into an NGSI-LD broker (demo)",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "mqtt": "5.16.1"
+  }
+}
