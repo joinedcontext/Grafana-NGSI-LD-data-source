@@ -87,11 +87,18 @@ jobs:
           npm ci --ignore-scripts
           npm test
 
+      - name: Helsinki demo pins the plugin version
+        run: |
+          version=$(jq -r .version datasource/plugin/package.json)
+          grep -q "releases/download/v$version/ngsild-grafana-datasource.zip" demos/helsinki/docker-compose.yml \
+            || { echo "::error::demos/helsinki/docker-compose.yml must install v$version"; exit 1; }
+
       - name: Compose files
         run: |
           docker compose -f datasource/docker-compose.yml config --quiet
           docker compose -f datasource/docker-compose.yml -f datasource/docker-compose.auth.yml config --quiet
           docker compose -f demos/helsinki/docker-compose.yml config --quiet
+          docker compose -f demos/helsinki/docker-compose.yml -f demos/helsinki/docker-compose.dev.yml config --quiet
 
   e2e:
     needs: test

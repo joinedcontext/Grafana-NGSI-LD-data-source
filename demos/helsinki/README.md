@@ -8,8 +8,8 @@ internet access for the feeds.
 docker compose up -d
 ```
 
-Grafana installs the plugin from the newest
-[GitHub release](https://github.com/joinedcontext/Grafana-NGSI-LD-data-source/releases/latest) before it starts. Then open
+Grafana installs the plugin from the
+[GitHub release](https://github.com/joinedcontext/Grafana-NGSI-LD-data-source/releases/tag/v8.1.0) the dashboard is made for before it starts. Then open
 http://localhost:3000. `docker compose down` stops the demo.
 
 | Service | Purpose |
@@ -58,7 +58,7 @@ the temporal panels keep everything.
 | `GRAFANA_PORT`, `BROKER_PORT` | 3000, 9090 | host ports |
 | `BIND_ADDRESS` | 127.0.0.1 | `0.0.0.0` publishes the ports on every interface |
 | `GRAFANA_VERSION` | 12.3.0 | Grafana release (also tested: 13.2.4) |
-| `NGSILD_PLUGIN_URL` | newest release zip | plugin zip, e.g. `https://github.com/joinedcontext/Grafana-NGSI-LD-data-source/releases/download/v8.1.0/ngsild-grafana-datasource.zip` |
+| `NGSILD_PLUGIN_URL` | the v8.1.0 release zip | plugin zip, e.g. `https://github.com/joinedcontext/Grafana-NGSI-LD-data-source/releases/latest/download/ngsild-grafana-datasource.zip` |
 
 The feeds also read `FMI_PLACE`, `HISTORY_HOURS`, `POLL_MINUTES`, `EVENTS_HOURS`, `EVENTS_MAX` and
 `EVENTS_BBOX` (see the head of each script); set them under `environment` in `docker-compose.yml`.
@@ -73,8 +73,20 @@ air quality history, `docker compose run --rm seed` rewrites the places.
 
 Tests of the feeds: `cd feeds && npm ci --ignore-scripts && npm test`.
 
-To try unreleased plugin code, use the development stack in `../../datasource`, which builds the plugin
-from source.
+## Developing the plugin
+
+`docker-compose.dev.yml` swaps the release for the plugin source in `../../datasource/plugin`: the `plugin`
+service runs the watch build in a container (no Node needed on your machine) and Grafana loads its `dist/`.
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.dev.yml logs -f plugin   # rebuilds
+```
+
+The first start installs the dependencies and builds, a few minutes. Then edit `src/`, wait for
+`compiled successfully` in the log and reload the browser; a change to `plugin.json` needs
+`docker compose restart grafana`. `docker compose up -d --remove-orphans` without the dev file returns to the release.
+The development stack in `../../datasource` has the sample data and the integration tests.
 
 ## Data
 

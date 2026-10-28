@@ -23,7 +23,7 @@ the Compose plugin (Linux), and git. Nothing else: Node, Grafana and the broker 
    ```
 
 3. Wait about a minute. The first start downloads the images, and Grafana installs the plugin from the
-   newest [release](https://github.com/joinedcontext/Grafana-NGSI-LD-data-source/releases/latest). Later
+   [release](https://github.com/joinedcontext/Grafana-NGSI-LD-data-source/releases) the dashboard is made for. Later
    starts take seconds. `docker compose ps` shows `antares`, `air`, `hsl`, `events` and `grafana` as *Up* and
    `seed` as *Exited (0)* when the demo is ready.
 4. Open http://localhost:3000. No login: the Helsinki dashboard is the home page.
@@ -42,7 +42,7 @@ fill in over the first minutes. Everything else about the demo: [demos/helsinki/
 | `Cannot connect to the Docker daemon` / `pipe/dockerDesktopLinuxEngine` | Docker Desktop is not running yet |
 | No trams, events or air quality | the feeds need internet: `docker compose logs air hsl events` |
 | Air quality history has a gap | the demo was stopped for a while: `docker compose restart air` writes fresh history |
-| Demo with a fixed plugin version | `NGSILD_PLUGIN_URL=https://github.com/joinedcontext/Grafana-NGSI-LD-data-source/releases/download/v8.0.0/ngsild-grafana-datasource.zip docker compose up -d` |
+| Demo with another plugin version | `NGSILD_PLUGIN_URL=https://github.com/joinedcontext/Grafana-NGSI-LD-data-source/releases/latest/download/ngsild-grafana-datasource.zip docker compose up -d` |
 
 ![Helsinki demo](screenshots/dashboard.png)
 
@@ -128,10 +128,10 @@ Without a release: `datasource/build.sh` builds `datasource/plugin/dist` in Dock
 ## Releases
 
 `.github/workflows/build.yml` runs typecheck, lint, unit tests, integration tests against Antares, the
-HSL feed tests and the end-to-end suite on Grafana 12.3.0 and 13.2.4 for every push and pull request.
+demo feed tests and the end-to-end suite on Grafana 12.3.0 and 13.2.4 for every push and pull request.
 
-To release, raise `version` in `datasource/plugin/package.json` (and add the entry to `CHANGELOG.md`) and
-push to `main`. When no tag `v<version>` exists yet and every check passes, the workflow builds the zip,
+To release, raise `version` in `datasource/plugin/package.json`, add the entry to `CHANGELOG.md`, set the
+same version in the release URL of `demos/helsinki/docker-compose.yml` (CI checks it) and push to `main`. When no tag `v<version>` exists yet and every check passes, the workflow builds the zip,
 stamps the version and date into `plugin.json`, signs it when the `GRAFANA_ACCESS_POLICY_TOKEN` secret is
 set, creates the tag and publishes the GitHub release. Pushing a `v*` tag does the same for that tag; the
 tag has to match the version in `package.json`. *Run workflow* with `release_tag` rebuilds an existing
@@ -149,6 +149,16 @@ npm run lint
 npm run test:ci          # unit tests
 npm run build            # production build
 ```
+
+Or without Node: the Helsinki demo in dev mode runs the watch build in a container and Grafana loads it.
+
+```bash
+cd demos/helsinki
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+```
+
+Edit `datasource/plugin/src`, wait for the rebuild (`docker compose -f docker-compose.yml -f docker-compose.dev.yml logs -f plugin`)
+and reload the browser. `docker compose up -d --remove-orphans` without the dev file goes back to the release.
 
 Integration and end-to-end tests need the development stack (`docker compose up -d` in `datasource/`):
 

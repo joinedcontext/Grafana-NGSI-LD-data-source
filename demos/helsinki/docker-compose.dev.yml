@@ -1,0 +1,36 @@
+# Develop the plugin against the Helsinki demo: Grafana loads ../../datasource/plugin/dist, which the
+# `plugin` service rebuilds on every save of ../../datasource/plugin/src. Reload the browser to see a change;
+# a change to plugin.json needs `docker compose restart grafana`.
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+services:
+  plugin:
+    image: node:22-alpine
+    working_dir: /src
+    volumes:
+      - ../../datasource/plugin:/src
+      # the container's own node_modules, kept out of the source folder
+      - plugin-node-modules:/src/node_modules
+    environment:
+      # file events do not cross a Windows or macOS bind mount
+      - WATCHPACK_POLLING=true
+    # .npmrc keeps install scripts off. Emptying dist/ holds Grafana back until the first build is done; the
+    # folder itself stays, Grafana mounts it, and gets read access for Grafana's user
+    command: ["sh", "-c", "mkdir -p dist && find dist -mindepth 1 -delete && chmod a+rx dist && npm ci --no-audit --no-fund && npm run dev"]
+    healthcheck:
+      test: ["CMD", "test", "-f", "/src/dist/module.js"]
+      interval: 5s
+      start_period: 5m
+    restart: unless-stopped
+
+  grafana:
+    depends_on:
+      plugin:
+        condition: service_healthy
+    volumes:
+      - ../../datasource/plugin/dist:/var/lib/grafana/plugins/ngsild-grafana-datasource:ro
+    environment:
+      # the local build instead of the release zip
+      - GF_PLUGINS_PREINSTALL_SYNC=
+
+volumes:
+  plugin-node-modules:
