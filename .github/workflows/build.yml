@@ -258,7 +258,8 @@ jobs:
           version=$(curl -sf http://localhost:3000/api/plugins/ngsild-grafana-datasource/settings | jq -r .info.version)
           echo "Grafana runs plugin $version"
           test "$version" = "${TAG#v}"
-          curl -sf "http://localhost:9090/ngsi-ld/v1/entities?type=AirQualityObserved&pick=id" | jq -e 'length == 3'
+          # the seeded places; the live feeds depend on outside services
+          curl -sf "http://localhost:9090/ngsi-ld/v1/entities?type=Park&pick=id" | jq -e 'length == 2'
 
       - name: Demo logs
         if: failure()
