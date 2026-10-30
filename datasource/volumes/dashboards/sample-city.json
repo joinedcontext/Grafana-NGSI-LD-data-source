@@ -83,7 +83,8 @@
       "pm25"
      ]
     }
-   ]
+   ],
+   "description": "Hourly PM10 and PM2.5 of the stations picked in Station, over the time range. Temporal query; the seed writes 48 hours of history."
   },
   {
    "id": 2,
@@ -117,7 +118,8 @@
      "aggrMethod": "avg,max",
      "aggrPeriodDuration": "PT6H"
     }
-   ]
+   ],
+   "description": "NO2 average and maximum per 6-hour period of the picked stations, computed by the broker (temporal aggregation over PT6H)."
   },
   {
    "id": 3,
@@ -150,7 +152,8 @@
      ],
      "namePattern": "entity_name"
     }
-   ]
+   ],
+   "description": "Current air quality index of each picked station: current value query, one value per entity."
   },
   {
    "id": 4,
@@ -208,7 +211,8 @@
       }
      }
     }
-   ]
+   ],
+   "description": "Current values as a table, one row per station, columns in the query's attribute order. observedAt is the time of the station's newest reading."
   },
   {
    "id": 5,
@@ -318,7 +322,8 @@
     "tooltip": {
      "mode": "details"
     }
-   }
+   },
+   "description": "Every located entity of the seed: stations as points, the road as a line, zones, parks and buildings as outlines. Geo query, Location: Shape."
   },
   {
    "id": 6,
@@ -353,7 +358,8 @@
       ]
      }
     }
-   ]
+   ],
+   "description": "Air quality stations and the entities their relationships point to, with pm10, battery level and floors as node values. Node graph query."
   }
  ]
 }

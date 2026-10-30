@@ -373,7 +373,7 @@
           "mode": "details"
         }
       },
-      "description": "Shapes: Geo query, Location: Shape. Stations, events, trams: Geo query, Location: Point. Trails: Geo query, Location: Trail (the trams' positions in the time range from the temporal API)."
+      "description": "Central Helsinki from the NGSI-LD broker: parks, squares and roads (OpenStreetMap shapes), FMI air quality stations, the next events and live HSL trams with their trails. Hover a marker for all its values; observedAt is when the station or tram last reported. Shapes: Geo query, Location: Shape. Stations, events, trams: Geo query, Location: Point. Trails: Geo query, Location: Trail (the trams' positions in the time range from the temporal API)."
     },
     {
       "id": 8,
@@ -497,7 +497,8 @@
       "options": {
         "showHeader": true,
         "cellHeight": "sm"
-      }
+      },
+      "description": "The next 24 hours of events in central Helsinki from Linked Events, refreshed every 15 minutes. Current value query as a table, with system attributes. Each Event's expiresAt is its end time, so the broker drops it once it is over."
     },
     {
       "id": 9,
@@ -622,7 +623,7 @@
           "values": false
         }
       },
-      "description": "Click a bar: when the station measured this value, and its history."
+      "description": "Latest air quality index of each FMI station, measured hourly: 1 good, 2 satisfactory, 3 fair, 4 poor, 5 very poor. Click a bar to see when the station measured it, and to open its history."
     },
     {
       "id": 10,
@@ -677,7 +678,8 @@
           "sort": "desc"
         }
       },
-      "timeFrom": "2d"
+      "timeFrom": "2d",
+      "description": "Hourly PM2.5 in µg/m³ of each FMI station over the dashboard time range. Temporal query; a long range arrives in several partial (206) answers, which the data source joins into one series per station."
     },
     {
       "id": 11,
@@ -735,7 +737,8 @@
           "sort": "desc"
         }
       },
-      "timeFrom": "2d"
+      "timeFrom": "2d",
+      "description": "NO2 of each FMI station, averaged by the broker over 6-hour periods (temporal aggregation, avg over PT6H). Each point stands at the start of its period."
     },
     {
       "id": 12,
@@ -847,7 +850,8 @@
         "tooltip": {
           "mode": "single"
         }
-      }
+      },
+      "description": "FMI air quality index of each station, hour by hour over the time range, coloured from 1 good (green) to 5 very poor (purple). Temporal query of airQualityIndex."
     },
     {
       "id": 13,
@@ -945,7 +949,8 @@
           "mode": "multi",
           "sort": "desc"
         }
-      }
+      },
+      "description": "Speed in m/s of the tracked trams from HSL's live feed, at most one update per tram every 15 seconds. Temporal query of the Vehicle speed attribute."
     },
     {
       "id": 3,
@@ -997,7 +1002,8 @@
           "mode": "multi",
           "sort": "desc"
         }
-      }
+      },
+      "description": "How many seconds each tram runs behind its timetable, from HSL's live feed: above 0 late, below 0 early."
     },
     {
       "id": 14,
@@ -1111,7 +1117,8 @@
         "tooltip": {
           "mode": "single"
         }
-      }
+      },
+      "description": "Upcoming events per Linked Events category, the 8 largest. Current value query of the Event category attribute, counted in Grafana (Group by, then Rows to fields so each category gets its own colour)."
     },
     {
       "id": 15,
@@ -1231,7 +1238,8 @@
             }
           }
         }
-      ]
+      ],
+      "description": "The trams tracked right now (up to 8): line, speed, heading and delay, with observedAt (last report) and expiresAt. Each update moves expiresAt 8 minutes ahead; a tram that stops reporting expires and leaves the table."
     }
   ]
 }
