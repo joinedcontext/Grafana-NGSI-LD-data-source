@@ -196,6 +196,15 @@
       },
       "renameByName": {
        "id": "entity id"
+      },
+      "indexByName": {
+       "id": 0,
+       "type": 1,
+       "name": 2,
+       "pm10": 3,
+       "temperature": 4,
+       "isOnline": 5,
+       "observedAt": 6
       }
      }
     }

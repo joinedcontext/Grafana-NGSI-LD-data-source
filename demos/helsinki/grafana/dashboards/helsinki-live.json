@@ -594,7 +594,17 @@
                 "value": 5
               }
             ]
-          }
+          },
+          "links": [
+            {
+              "title": "${__field.displayName}: measured ${__value.time:date:D.M.YYYY HH:mm}",
+              "url": "/d/ngsild-helsinki-live?viewPanel=12&${__url_time_range}"
+            },
+            {
+              "title": "PM2.5 of the last 48 h",
+              "url": "/d/ngsild-helsinki-live?viewPanel=10&${__url_time_range}"
+            }
+          ]
         },
         "overrides": []
       },
@@ -611,7 +621,8 @@
           "fields": "",
           "values": false
         }
-      }
+      },
+      "description": "Click a bar: when the station measured this value, and its history."
     },
     {
       "id": 10,
@@ -1052,6 +1063,21 @@
           "options": {
             "limitField": 8
           }
+        },
+        {
+          "id": "rowsToFields",
+          "options": {
+            "mappings": [
+              {
+                "fieldName": "category",
+                "handlerKey": "field.name"
+              },
+              {
+                "fieldName": "id (count)",
+                "handlerKey": "field.value"
+              }
+            ]
+          }
         }
       ],
       "fieldConfig": {
@@ -1063,7 +1089,7 @@
         "overrides": []
       },
       "options": {
-        "pieType": "donut",
+        "pieType": "pie",
         "displayLabels": [
           "value"
         ],
@@ -1080,7 +1106,7 @@
             "lastNotNull"
           ],
           "fields": "",
-          "values": true
+          "values": false
         },
         "tooltip": {
           "mode": "single"

@@ -438,6 +438,32 @@ describe('fetchEntities', () => {
     serve(() => ({ data: { id: 'e', type: 'T' } }));
     expect((await makeDs().fetchEntities({ refId: 'A', entityId: 'e' })).entities).toEqual([{ id: 'e', type: 'T' }]);
   });
+
+  it('keeps paging past a short page while the count says more exist', async () => {
+    // a broker that serves at most 3 entities an answer, whatever the limit
+    const calls = serve((_path, p) => {
+      const offset = Number(p.offset ?? 0);
+      const n = Math.max(0, Math.min(3, Number(p.limit), 7 - offset));
+      return {
+        data: Array.from({ length: n }, (_, i) => ({ id: `e${offset + i}`, type: 'T' })),
+        headers: p.count === 'true' ? { 'NGSILD-Results-Count': '7' } : undefined,
+      };
+    });
+    const { entities, notices } = await makeDs({ pageSize: 5 }).fetchEntities({ refId: 'A', entityType: 'T' });
+    expect(entities.map((e) => e.id)).toEqual(['e0', 'e1', 'e2', 'e3', 'e4', 'e5', 'e6']);
+    expect(calls.map((c) => c.params.offset)).toEqual([undefined, '3', '6']);
+    expect(notices).toEqual([]);
+  });
+
+  it('stops at an empty page even when the count says more exist', async () => {
+    const calls = serve((_path, p) => ({
+      data: p.offset ? [] : [{ id: 'e0', type: 'T' }],
+      headers: { 'NGSILD-Results-Count': '5' },
+    }));
+    const { entities } = await makeDs({ pageSize: 1 }).fetchEntities({ refId: 'A', entityType: 'T' });
+    expect(entities).toHaveLength(1);
+    expect(calls).toHaveLength(2);
+  });
 });
 
 describe('temporal query', () => {
@@ -539,6 +565,51 @@ describe('temporal query', () => {
     const res = await run(makeDs(), {});
     expect(temporalCalls(calls)).toHaveLength(2);
     expect(res.data[0].meta?.notices?.[0].text).toContain('cannot be continued');
+  });
+
+  it('pages by position when the broker leaves entities without history out of a counted page', async () => {
+    // pages the 6 matches first, then drops b and d, which have no instances in the range
+    const ids = ['a', 'b', 'c', 'd', 'e', 'f'];
+    const calls = serve((path, p) => {
+      if (path !== '/temporal/entities') {
+        return { data: [] };
+      }
+      const offset = Number(p.offset ?? 0);
+      const page = (p.id ? p.id.split(',') : ids.slice(offset, offset + Number(p.limit))).filter(
+        (id) => !['b', 'd'].includes(id)
+      );
+      return {
+        data: page.map((id) => ({ id, type: 'T', p: { type: 'Property', values: [[1, iso(START)]] } })),
+        headers: p.count === 'true' ? { 'NGSILD-Results-Count': '6' } : undefined,
+      };
+    });
+    const res = await run(makeDs({ pageSize: 2 }), {});
+    expect(res.data.map((f) => f.fields[1].labels.entity)).toEqual(['a', 'c', 'e', 'f']);
+    expect(temporalCalls(calls).map((c) => c.params.offset)).toEqual([undefined, '2', '4']);
+  });
+
+  it('continues a cut aggregated page per method, from the earliest cut bucket', async () => {
+    const buckets = hours(0, 8); // 9 hourly buckets, 4 a page
+    const calls = serve((path, p) => {
+      if (path !== '/temporal/entities') {
+        return { data: [] };
+      }
+      const served = buckets.filter((t) => t >= Date.parse(p.timeAt) && t < Date.parse(p.endTimeAt));
+      const page = served.slice(0, 4);
+      const bucket = (t: number) => [(t - START) / HOUR, iso(t), iso(t + HOUR)];
+      return {
+        status: served.length > 4 ? 206 : 200,
+        data: [{ id: 'e', type: 'T', p: { type: 'Property', max: page.map(bucket), min: page.map(bucket) } }],
+      };
+    });
+    const res = await run(makeDs(), { aggrMethod: 'max,min', aggrPeriodDuration: 'PT1H' }, START, START + 9 * HOUR);
+    expect(res.data.map(valuesOf)).toEqual([buckets.map((_, i) => i), buckets.map((_, i) => i)]);
+    expect(temporalCalls(calls).map((c) => c.params.timeAt)).toEqual([
+      iso(START),
+      iso(START + 3 * HOUR),
+      iso(START + 6 * HOUR),
+    ]);
+    expect(res.data[0].meta?.notices).toBeUndefined();
   });
 
   it('pages entities by offset and continues each page by its own ids', async () => {
@@ -1013,6 +1084,26 @@ describe('variable queries with variables', () => {
     serve(() => ({ data: ['10', '2', '1'].map((v, i) => ({ id: `e${i}`, type: 'T', v: { value: Number(v) } })) }));
     const res = await makeDs().metricFindQuery('values(T, v)');
     expect(res.map((v) => v.text)).toEqual(['1', '2', '10']);
+  });
+});
+
+describe('variable paging', () => {
+  it('reads every entity of the type, past the default query limit', async () => {
+    const calls = serve((_path, p) => {
+      const offset = Number(p.offset ?? 0);
+      const n = Math.max(0, Math.min(Number(p.limit), 2500 - offset));
+      return {
+        data: Array.from({ length: n }, (_, i) => ({
+          id: `urn:x:e${offset + i}`,
+          type: 'T',
+          v: { value: (offset + i) % 3 },
+        })),
+        headers: p.count === 'true' ? { 'NGSILD-Results-Count': '2500' } : undefined,
+      };
+    });
+    expect(await makeDs().metricFindQuery('entities(T)')).toHaveLength(2500);
+    expect(calls).toHaveLength(3);
+    expect((await makeDs().metricFindQuery('values(T, v)')).map((v) => v.text)).toEqual(['0', '1', '2']);
   });
 });
 

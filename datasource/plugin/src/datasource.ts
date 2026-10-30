@@ -55,6 +55,9 @@ const ID_CHUNK = 50;
 /** Frames per query and nodes per graph; more freezes the browser. */
 export const MAX_FRAMES = 500;
 export const MAX_NODES = 1000;
+// ponytail: a variable reads every entity of its type up to this many (pages of Page size); a dropdown
+// longer than that is no longer something to pick from
+export const MAX_VARIABLE_ENTITIES = 10_000;
 /** How long the editor's lookups (types, attributes) are reused. */
 const CACHE_MS = 60_000;
 const MAX_DETAIL = 200;
@@ -355,11 +358,13 @@ export class NgsildDataSource extends DataSourceApi<NgsildQuery, NgsildSourceOpt
       total ??= resultsCount(res);
       const page = asArray(res.data);
       entities.push(...page);
-      if (page.length < want) {
-        return { entities, notices: [] };
-      }
       if (entities.length >= limit) {
         return { entities, notices: (total ?? Infinity) > limit ? [limitNotice] : [] };
+      }
+      // a short page ends the list, unless the broker counted more: then it served fewer than asked
+      const more = total !== undefined ? entities.length < total : page.length === want;
+      if (page.length === 0 || !more) {
+        return { entities, notices: [] };
       }
     }
   }
@@ -402,9 +407,11 @@ export class NgsildDataSource extends DataSourceApi<NgsildQuery, NgsildSourceOpt
           offset > 0 ? String(offset) : idChunk ? undefined : 'true'
         );
         const count = await this.collectPage(page, run);
-        offset += count;
         total += count;
-        if (count < want) {
+        // a counted query pages by position: a broker may leave entities without instances in the range
+        // out of a page, so a short page ends the list only when nothing is counted after it
+        offset += run.total !== undefined ? want : count;
+        if (run.total !== undefined ? offset >= run.total : count < want) {
           break;
         }
       }
@@ -664,6 +671,7 @@ export class NgsildDataSource extends DataSourceApi<NgsildQuery, NgsildSourceOpt
           entityType: type,
           entityName: second || 'id_short',
           attributes: second ? [second] : [],
+          limit: MAX_VARIABLE_ENTITIES,
         };
         const { entities } = await this.fetchEntities(q, undefined, ['id', ...(second ? [second] : [])]);
         return entities.map((e) => ({ text: entityLabel(e, q), value: e.id }));
@@ -673,7 +681,7 @@ export class NgsildDataSource extends DataSourceApi<NgsildQuery, NgsildSourceOpt
           throw new Error('values(Type, attribute) needs a type and an attribute');
         }
         const { entities } = await this.fetchEntities(
-          { refId: 'var', entityType: type, attributes: [second] },
+          { refId: 'var', entityType: type, attributes: [second], limit: MAX_VARIABLE_ENTITIES },
           undefined,
           ['id', second]
         );

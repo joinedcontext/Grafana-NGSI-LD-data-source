@@ -32,9 +32,6 @@ services:
       ANTARES_DATABASE_URL: postgres://antares:${POSTGRES_PASSWORD:-antares}@postgres:5432/antares
       # one broker process, so the in-process change bus is safe with a database store
       ANTARES_ALLOW_SHARED_LOCAL: "1"
-      # 9 instances per attribute and answer, so the 48 h seed comes back in 206 pages and the
-      # tests exercise the plugin's continuation; the broker's own ceiling is 1000
-      ANTARES_TEMPORAL_INSTANCE_LIMIT: "9"
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:${BROKER_PORT:-9090}:9090"
 

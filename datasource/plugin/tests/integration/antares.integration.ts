@@ -23,7 +23,9 @@ import { NgsildQuery, NgsildQueryType, NgsildSourceOptions } from '../../src/typ
 
 const BROKER = (process.env.NGSILD_BROKER_URL || 'http://localhost:9090').replace(/\/$/, '');
 const TENANT = 'grafana-it';
-const HOURS = 48;
+// past the broker's default of 100 instances per attribute and answer (Antares
+// ANTARES_TEMPORAL_DEFAULT_INSTANCES), so a temporal query pages through 206 answers
+const HOURS = 250;
 const HOUR = 3600_000;
 const START = Date.UTC(2026, 0, 1);
 const END = START + HOURS * HOUR;
@@ -160,7 +162,7 @@ describe('metadata and variables', () => {
 });
 
 describe('temporal', () => {
-  it('collects all 48 hourly values of every station across 206 pages', async () => {
+  it('collects all hourly values of every station across 206 pages', async () => {
     const res = await query({ entityType: 'AirQualityObserved', attributes: ['pm10'] });
     expect(res.errors).toBeUndefined();
     const frames = byEntity(res.data);
@@ -220,7 +222,8 @@ describe('temporal', () => {
     });
     const byMethod = Object.fromEntries(res.data.map((f: any) => [f.fields[1].labels.aggregation, f.fields[1].values]));
     const day = (d: number) => Array.from({ length: 24 }, (_, i) => pm10(1, d * 24 + i));
-    expect(byMethod.max).toEqual([Math.max(...day(0)), Math.max(...day(1))]);
+    expect(byMethod.max).toHaveLength(Math.ceil(HOURS / 24));
+    expect(byMethod.max.slice(0, 2)).toEqual([Math.max(...day(0)), Math.max(...day(1))]);
     expect(byMethod.avg[0]).toBeCloseTo(day(0).reduce((a, b) => a + b) / 24, 6);
   });
 

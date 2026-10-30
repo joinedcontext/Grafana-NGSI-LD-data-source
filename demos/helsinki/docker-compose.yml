@@ -99,7 +99,7 @@ services:
       # the plugin release this dashboard is made for, installed before Grafana starts (CI checks that it
       # matches the plugin version); NGSILD_PLUGIN_URL picks another zip, e.g. .../releases/latest/download/...
       # docker-compose.dev.yml uses the local build instead
-      - GF_PLUGINS_PREINSTALL_SYNC=ngsild-grafana-datasource@@${NGSILD_PLUGIN_URL:-https://github.com/joinedcontext/Grafana-NGSI-LD-data-source/releases/download/v8.1.1/ngsild-grafana-datasource.zip}
+      - GF_PLUGINS_PREINSTALL_SYNC=ngsild-grafana-datasource@@${NGSILD_PLUGIN_URL:-https://github.com/joinedcontext/Grafana-NGSI-LD-data-source/releases/download/v8.2.0/ngsild-grafana-datasource.zip}
       # the release zip is unsigned
       - GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=ngsild-grafana-datasource
       # demo only: anonymous admin, never expose this stack

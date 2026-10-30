@@ -54,8 +54,6 @@ jobs:
           ANTARES_STORE: postgres
           ANTARES_DATABASE_URL: postgres://antares:antares@postgres:5432/antares
           ANTARES_ALLOW_SHARED_LOCAL: "1"
-          # the 206 paging tests need answers cut short, as in datasource/docker-compose.yml
-          ANTARES_TEMPORAL_INSTANCE_LIMIT: "9"
         ports:
           - 9090:9090
     steps:

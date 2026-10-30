@@ -1,5 +1,19 @@
 # Changelog
 
+## 8.2.0
+
+* `observedAt` column in the current value table and the Geo frame (so the Geomap tooltip): when the
+  entity's newest reading was taken, shown to the second
+* Paging by the broker's count: a short entity page no longer ends a query while more entities are
+  counted, and a temporal page that leaves out entities without instances moves on by position
+* A cut aggregated temporal answer is continued per method instead of stopping with a warning
+* Variables `entities()` and `values()` read up to 10,000 entities instead of 1000
+* Development stack, Helsinki demo and CI run Antares 0.2.0 on PostGIS at its default temporal limits
+  (100 instances per attribute and answer, 1000 at most); the integration suite seeds 250 hours so it
+  still pages
+* Helsinki demo: the air quality bars open a menu with the measurement time and the station history;
+  the events pie colours each category apart and centres its numbers
+
 ## 8.1.1
 
 Ready for the Grafana plugin catalog (plugin validator):

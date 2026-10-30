@@ -207,9 +207,8 @@ screenshots/    images for this README
   entities per request; Save & test checks that the broker accepts the *Page size*.
 - Brokers cut long temporal answers (`206 Partial Content`). The plugin continues them; *Max temporal
   pages* bounds the requests per query. A broker that serves more instances per answer needs fewer
-  requests: Antares reads `ANTARES_TEMPORAL_INSTANCE_LIMIT` (at most 1000 instances per attribute from
-  0.2.0) and `ANTARES_TEMPORAL_DEFAULT_INSTANCES` (100). The dev stack in `datasource/` sets the limit to
-  9, so its 48 h of sample history comes back in 206 pages.
+  requests: Antares serves 100 instances per attribute by default (`ANTARES_TEMPORAL_DEFAULT_INSTANCES`)
+  and 1000 at most (`ANTARES_TEMPORAL_INSTANCE_LIMIT`); every stack here runs those defaults.
 
 ## License
 

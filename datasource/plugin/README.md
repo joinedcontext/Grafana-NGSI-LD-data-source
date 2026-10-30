@@ -49,10 +49,12 @@ to refuse writes for these credentials.
   instances (`urn:ngsi-ld:null`) are gaps; with `deletedAt` each deletion charts as 1.
 - **Current value**: current attribute values as one frame per attribute (stat, gauge) or one table.
   *Representation* (Normalized, Concise, keyValues) and *System attributes* (`createdAt`, `modifiedAt`)
-  apply to this type only. Entities with `expiresAt` add it as a time column after id and type.
+  apply to this type only. The table has an `observedAt` column (the time of the entity's newest
+  reading) when any attribute carries one, and `expiresAt` when any entity has one, after id and type.
 - **Geo**: entity locations for the Geomap panel. *Location: Point* gives latitude/longitude, with lines
   and polygons placed at the mean of their positions. *Location: Shape* gives the geometry as a geo field
-  that the Geomap markers layer draws: points as markers, lines as lines, polygons as the outline of each
+  that the Geomap markers layer draws (the tooltip includes `observedAt` and `expiresAt` as in the
+  table): points as markers, lines as lines, polygons as the outline of each
   ring, multi geometries and collections as their members (one row per part, each with the entity's
   columns). Grafana 12.3 and 13 drop a line's stroke in a markers layer that also shows text, so put the
   shapes in one markers layer without text and the names in a second layer without a symbol, as the
@@ -77,9 +79,13 @@ whose notice says why; an unknown entity type is named, with the types the broke
 ### Paging
 
 Entity queries are paged by `offset` up to the query limit. The first request asks for the total
-(`count=true`), so the limit notice appears only when more entities match than the limit. Temporal answers that a broker cuts
+(`count=true`), so the limit notice appears only when more entities match than the limit. With that total
+a short page does not end the query: a broker that serves fewer entities than asked is paged on, and a
+temporal page that leaves out entities without instances in the range moves on by the page size. Without
+a total, a short page is the last. Temporal answers that a broker cuts
 (`206 Partial Content`, CIM 009 6.3.10) are continued per entity, from the earliest cut point of the page, so
-entities with sparse data lose no instances. A query that needs more requests than *Max temporal pages* stops
+entities with sparse data lose no instances; an aggregated answer is continued per method, from its
+earliest cut bucket. A query that needs more requests than *Max temporal pages* stops
 there with a warning, and so does a query whose later request fails: the panel keeps what arrived. More
 than 50 entity ids go out in several requests. A refresh or a new time range cancels a running query.
 
@@ -91,6 +97,8 @@ than 50 entity ids go out in several requests. A refresh or a new time range can
 | `attributes()`, `attributes(Type)` | attribute names, of all types or one |
 | `entities(Type)`, `entities(Type, nameAttr)` | entity ids; the text is the short id or the value of `nameAttr` |
 | `values(Type, attr)` | distinct current values of `attr` |
+
+`entities()` and `values()` read up to 10,000 entities, in pages of *Page size*.
 
 Multi-value variables expand to comma-separated lists, which is what `id`, `type` and `attrs` take. In `q`
 use `${var:doublequote}`.

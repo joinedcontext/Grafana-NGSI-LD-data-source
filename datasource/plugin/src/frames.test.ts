@@ -454,6 +454,37 @@ describe('entitiesToTable', () => {
     const frame = entitiesToTable([{ id: 'a', type: 'T' }] as Entity[], q({ format: 'table' }));
     expect(frame.fields.map((f) => f.name)).toEqual(['id', 'type']);
   });
+
+  it('shows when the newest reading of each entity was taken', () => {
+    const frame = entitiesToTable(
+      [
+        {
+          id: 'a',
+          type: 'T',
+          expiresAt: '2026-10-30T07:00:00Z',
+          pm10: { type: 'Property', value: 1, observedAt: '2026-10-30T05:00:00Z' },
+          no2: [
+            { type: 'Property', value: 2, observedAt: '2026-10-30T06:00:00Z', datasetId: 'urn:d:x' },
+            { type: 'Property', value: 3, observedAt: 'yesterday' },
+          ],
+        },
+        { id: 'b', type: 'T', pm10: { type: 'Property', value: 4 } },
+      ] as Entity[],
+      q()
+    );
+    expect(frame.fields.map((f) => f.name)).toEqual([
+      'id',
+      'type',
+      'observedAt',
+      'expiresAt',
+      'no2',
+      'no2 (x)',
+      'pm10',
+    ]);
+    expect(field(frame, 'observedAt').type).toBe(FieldType.time);
+    expect(field(frame, 'observedAt').config.unit).toBe('dateTimeAsIso');
+    expect(field(frame, 'observedAt').values).toEqual([Date.parse('2026-10-30T06:00:00Z'), null]);
+  });
 });
 
 describe('entitiesToGeo', () => {
@@ -492,6 +523,45 @@ describe('entitiesToGeo', () => {
     expect(JSON.parse(field(frame, 'geometry').values[0])).toEqual({ type: 'Point', coordinates: [19, 48] });
     expect(field(frame, 'pm10').values).toEqual([5, null]);
     expect(field(frame, 'location')).toBeUndefined();
+  });
+
+  it('shows when each located entity was last observed, a location update included', () => {
+    const frame = entitiesToGeo(
+      [
+        {
+          id: 'urn:x:S',
+          type: 'T',
+          location: { type: 'GeoProperty', value: { type: 'Point', coordinates: [24.9, 60.2] } },
+          airQualityIndex: { type: 'Property', value: 2, observedAt: '2026-10-30T05:00:00Z' },
+        },
+        {
+          id: 'urn:x:V',
+          type: 'T',
+          location: {
+            type: 'GeoProperty',
+            value: { type: 'Point', coordinates: [24.9, 60.1] },
+            observedAt: '2026-10-30T05:59:30Z',
+          },
+          speed: { type: 'Property', value: 7, observedAt: '2026-10-30T05:59:00Z' },
+        },
+        { id: 'urn:x:P', type: 'T', location: { type: 'GeoProperty', value: { type: 'Point', coordinates: [1, 2] } } },
+      ],
+      q()
+    );
+    expect(field(frame, 'observedAt').values).toEqual([
+      Date.parse('2026-10-30T05:00:00Z'),
+      Date.parse('2026-10-30T05:59:30Z'),
+      null,
+    ]);
+    expect(field(frame, 'expiresAt')).toBeUndefined();
+  });
+
+  it('has no observedAt column when nothing was observed', () => {
+    const frame = entitiesToGeo(
+      [{ id: 'a', type: 'T', location: { type: 'GeoProperty', value: { type: 'Point', coordinates: [1, 2] } } }],
+      q()
+    );
+    expect(field(frame, 'observedAt')).toBeUndefined();
   });
 
   it('reads another geoproperty and keeps the name attribute out of the columns', () => {

@@ -152,7 +152,7 @@ export interface PageCut {
  * set at the same instance count, so the sets that reached the page's largest count are the cut ones.
  * Forwards the page continues at the earliest end of a cut set, backwards (lastN) at the latest start,
  * so no entity's instances are skipped; the Content-Range end alone would skip those of entities with
- * sparser data. Only entities with a cut set are continued.
+ * sparser data. Only entities with a cut set are continued. An aggregated page is cut per method, at bucket starts.
  * Undefined when the page holds no timed instance (nothing to continue from).
  */
 export function pageCut(entities: Entity[], backwards: boolean): PageCut | undefined {
@@ -164,17 +164,25 @@ export function pageCut(entities: Entity[], backwards: boolean): PageCut | undef
         if (typeof inst !== 'object' || inst === null || isRelationship(inst)) {
           continue;
         }
-        const key = datasetIdOf(inst) ?? '';
-        for (const [, time] of temporalPairs(inst as Record<string, any>) ?? []) {
-          const t = typeof time === 'string' ? Date.parse(time) : NaN;
-          if (!Number.isFinite(t)) {
-            continue;
+        const i = inst as Record<string, any>;
+        const pairs = temporalPairs(i);
+        // the aggregated form cuts each method's buckets, timed by their start
+        const timed: Array<[string, unknown[]]> = pairs
+          ? [['', pairs.map(([, time]) => time)]]
+          : AGGREGATION_METHODS.filter((m) => Array.isArray(i[m])).map((m) => [m, i[m].map((b: unknown[]) => b?.[1])]);
+        for (const [method, times] of timed) {
+          const key = `${datasetIdOf(inst) ?? ''}\u0000${method}`;
+          for (const time of times) {
+            const t = typeof time === 'string' ? Date.parse(time) : NaN;
+            if (!Number.isFinite(t)) {
+              continue;
+            }
+            const set = byDataset.get(key) ?? { id: e.id, count: 0, first: t, last: t };
+            set.count++;
+            set.first = Math.min(set.first, t);
+            set.last = Math.max(set.last, t);
+            byDataset.set(key, set);
           }
-          const set = byDataset.get(key) ?? { id: e.id, count: 0, first: t, last: t };
-          set.count++;
-          set.first = Math.min(set.first, t);
-          set.last = Math.max(set.last, t);
-          byDataset.set(key, set);
         }
       }
       sets.push(...byDataset.values());
@@ -414,26 +422,54 @@ function attributeColumns(entities: Entity[], q: NgsildQuery, skip: string[]): C
 const columnField = (c: Column): Field =>
   valueField(c.name, c.values, c.units.size === 1 ? { unit: grafanaUnit([...c.units][0]) } : {});
 
+const parseTime = (t: unknown): number => (typeof t === 'string' ? Date.parse(t) : NaN);
+
+/** When the entity's newest reading was taken: the latest observedAt of its attribute instances, else NaN. */
+export function observedAtOf(e: Entity): number {
+  let newest = NaN;
+  for (const attr of attributeNames(e)) {
+    for (const inst of instances(e[attr])) {
+      const t = parseTime((inst as any)?.observedAt);
+      if (t > newest || (Number.isNaN(newest) && Number.isFinite(t))) {
+        newest = t;
+      }
+    }
+  }
+  return newest;
+}
+
+/** A time column (epoch ms, null where NaN), or none when no row has a time; shown to the second. */
+const optionalTimeField = (name: string, times: number[]): Field[] =>
+  times.some(Number.isFinite)
+    ? [
+        {
+          name,
+          type: FieldType.time,
+          values: times.map((t) => (Number.isFinite(t) ? t : null)),
+          config: { unit: 'dateTimeAsIso' },
+        },
+      ]
+    : [];
+
+/** Columns per entity: observedAt (newest reading) and expiresAt, each only when some entity has one. */
+const entityTimeFields = (entities: Entity[]): Field[] => [
+  ...optionalTimeField('observedAt', entities.map(observedAtOf)),
+  // an entity member (CIM 009 4.5.1), not an attribute; brokers may send it only with sysAttrs
+  ...optionalTimeField(
+    'expiresAt',
+    entities.map((e) => parseTime(e.expiresAt))
+  ),
+];
+
 /** Current values as one table: a row per entity, a column per attribute. */
 export function entitiesToTable(entities: Entity[], q: NgsildQuery): DataFrame {
-  // an entity member (CIM 009 4.5.1), not an attribute; brokers may send it only with sysAttrs
-  const expires = entities.map((e) => (typeof e.expiresAt === 'string' ? Date.parse(e.expiresAt) : NaN));
   return createDataFrame({
     refId: q.refId,
     meta: { preferredVisualisationType: 'table' },
     fields: [
       { name: 'id', type: FieldType.string, values: entities.map((e) => e.id), config: {} },
       { name: 'type', type: FieldType.string, values: entities.map(typeOf), config: {} },
-      ...(expires.some(Number.isFinite)
-        ? [
-            {
-              name: 'expiresAt',
-              type: FieldType.time,
-              values: expires.map((t) => (Number.isFinite(t) ? t : null)),
-              config: {},
-            },
-          ]
-        : []),
+      ...entityTimeFields(entities),
       ...attributeColumns(entities, q, []).map(columnField),
     ],
   });
@@ -484,7 +520,8 @@ export function drawableParts(geometry: any): any[] {
 
 /**
  * Entities with a geometry in `geoproperty` (default location) as a geomap table:
- * name, latitude, longitude (point, else the mean of the positions), geometry, attributes.
+ * name, latitude, longitude (point, else the mean of the positions), geometry, observedAt and expiresAt
+ * (see entitiesToTable), attributes.
  * The geometry is GeoJSON text, or with geoLocation "shape" a geo field the Geomap panel draws: then an
  * entity has a row per drawable part (see drawableParts), each with the entity's columns.
  */
@@ -513,6 +550,7 @@ export function entitiesToGeo(entities: Entity[], q: NgsildQuery): DataFrame {
       shape
         ? { name: 'geometry', type: FieldType.geo, values: rows.map((r) => mapGeometry(r.part)), config: {} }
         : { name: 'geometry', type: FieldType.string, values: rows.map((r) => JSON.stringify(r.geometry)), config: {} },
+      ...entityTimeFields(located),
       ...attributeColumns(located, q, skip).map(columnField),
     ],
   });

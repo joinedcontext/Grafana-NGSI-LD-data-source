@@ -1,6 +1,6 @@
 {
   "name": "ngsild-grafana-datasource",
-  "version": "8.1.1",
+  "version": "8.2.0",
   "description": "Grafana data source for NGSI-LD context brokers (ETSI CIM 009)",
   "scripts": {
     "build": "webpack -c ./.config/webpack/webpack.config.ts --env production",
