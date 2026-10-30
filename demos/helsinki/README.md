@@ -29,14 +29,14 @@ also deletes it.
   stations, the venues of the next events, and the trams turned to their heading and labelled with their
   line. Each tram draws its trail of the time range (Geo, *Location: Trail*: the positions from the
   temporal API as one line per tram).
-- **Next events**: table of the events with start, end (`expiresAt`), venue and category, and a pie chart
-  by category.
+- **Next events**: table of the events with start, end (`expiresAt`), venue and category, and a horizontal
+  bar chart of the 8 largest categories.
 - **Air quality**: the current index per station, PM2.5 history, the 6-hour NO2 average (temporal
   aggregation) and the index of each station over two days as a state timeline, in FMI's colours.
 - **Trams**: speed and delay history (temporal) and a table of the trams on the broker now.
 - **Node graphs**: trams, their lines and the operator; events, their venues and the city.
 
-The dashboard refreshes every 10 seconds and shows the last 5 minutes; the air quality panels show the
+The dashboard refreshes every 5 seconds and shows the last 5 minutes; the air quality panels show the
 last two days.
 
 ## Feeds and expiresAt

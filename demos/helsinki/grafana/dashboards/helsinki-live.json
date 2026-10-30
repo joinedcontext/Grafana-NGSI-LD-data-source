@@ -13,7 +13,7 @@
     "from": "now-5m",
     "to": "now"
   },
-  "refresh": "10s",
+  "refresh": "5s",
   "templating": {
     "list": [
       {
@@ -621,6 +621,10 @@
           ],
           "fields": "",
           "values": false
+        },
+        "text": {
+          "titleSize": 12,
+          "valueSize": 14
         }
       },
       "description": "Latest air quality index of each FMI station, measured hourly: 1 good, 2 satisfactory, 3 fair, 4 poor, 5 very poor. Click a bar to see when the station measured it, and to open its history."
@@ -1007,7 +1011,7 @@
     },
     {
       "id": 14,
-      "type": "piechart",
+      "type": "barchart",
       "title": "Next events by category (current values, grouped)",
       "gridPos": {
         "x": 12,
@@ -1071,55 +1075,130 @@
           }
         },
         {
-          "id": "rowsToFields",
+          "id": "calculateField",
           "options": {
-            "mappings": [
-              {
-                "fieldName": "category",
-                "handlerKey": "field.name"
-              },
-              {
-                "fieldName": "id (count)",
-                "handlerKey": "field.value"
-              }
-            ]
+            "mode": "index",
+            "alias": "rank",
+            "replaceFields": false,
+            "index": {
+              "asPercentile": false
+            }
           }
         }
       ],
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "fixed",
+            "fixedColor": "#7EB26D"
+          },
+          "decimals": 0,
+          "custom": {
+            "fillOpacity": 85,
+            "lineWidth": 0,
+            "gradientMode": "none",
+            "axisPlacement": "auto",
+            "axisLabel": "",
+            "axisSoftMin": 0,
+            "axisGridShow": true
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "id (count)"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "events"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "rank"
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "viz": true,
+                  "legend": true,
+                  "tooltip": true
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "color": "#7EB26D",
+                        "index": 0
+                      },
+                      "1": {
+                        "color": "#EAB839",
+                        "index": 1
+                      },
+                      "2": {
+                        "color": "#6ED0E0",
+                        "index": 2
+                      },
+                      "3": {
+                        "color": "#EF843C",
+                        "index": 3
+                      },
+                      "4": {
+                        "color": "#E24D42",
+                        "index": 4
+                      },
+                      "5": {
+                        "color": "#1F78C1",
+                        "index": 5
+                      },
+                      "6": {
+                        "color": "#BA43A6",
+                        "index": 6
+                      },
+                      "7": {
+                        "color": "#705DA0",
+                        "index": 7
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
       },
       "options": {
-        "pieType": "pie",
-        "displayLabels": [
-          "value"
-        ],
+        "orientation": "horizontal",
+        "xField": "category",
+        "showValue": "always",
+        "stacking": "none",
+        "barWidth": 0.8,
+        "groupWidth": 0.7,
+        "fullHighlight": false,
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0,
         "legend": {
-          "showLegend": true,
-          "displayMode": "table",
-          "placement": "right",
-          "values": [
-            "value",
-            "percent"
-          ]
-        },
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
         },
         "tooltip": {
-          "mode": "single"
-        }
+          "mode": "single",
+          "sort": "none"
+        },
+        "colorByField": "rank"
       },
-      "description": "Upcoming events per Linked Events category, the 8 largest, with count and share in the legend. Current value query of the Event category attribute, counted in Grafana (Group by, then Rows to fields so each category gets its own colour)."
+      "description": "Upcoming events per Linked Events category, the 8 largest, as a horizontal bar chart, one colour per category. Current value query of the Event category attribute, grouped and counted in Grafana (Group by)."
     },
     {
       "id": 15,
