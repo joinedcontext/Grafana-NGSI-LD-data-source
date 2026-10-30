@@ -36,7 +36,7 @@ also deletes it.
 - **Trams**: speed and delay history (temporal) and a table of the trams on the broker now.
 - **Node graphs**: trams, their lines and the operator; events, their venues and the city.
 
-The dashboard refreshes every 10 seconds and shows the last 15 minutes; the air quality panels show the
+The dashboard refreshes every 10 seconds and shows the last 5 minutes; the air quality panels show the
 last two days.
 
 ## Feeds and expiresAt
