@@ -10,11 +10,13 @@ docker compose up -d
 
 Grafana installs the plugin from the
 [GitHub release](https://github.com/joinedcontext/Grafana-NGSI-LD-data-source/releases/tag/v8.1.1) the dashboard is made for before it starts. Then open
-http://localhost:3000. `docker compose down` stops the demo.
+http://localhost:3000. `docker compose down` stops the demo and keeps its history; `docker compose down -v`
+also deletes it.
 
 | Service | Purpose |
 |---|---|
-| `antares` | `ghcr.io/joinedcontext/antares-broker:0.1.4` (`ANTARES_VERSION` picks another), NGSI-LD API on http://localhost:9090/ngsi-ld/v1 |
+| `postgres` | PostGIS 17 (`ghcr.io/baosystems/postgis:17-3.5`): the broker's store, current state and history, in the `postgres` volume. Not published; `POSTGRES_PASSWORD` sets its password |
+| `antares` | `ghcr.io/joinedcontext/antares-broker:0.2.0` (`ANTARES_VERSION` picks another) with `ANTARES_STORE=postgres`, NGSI-LD API on http://localhost:9090/ngsi-ld/v1 |
 | `seed` | Runs `../../datasource/seed/seed.mjs --places-only` on every `up`: City Hall, Helsinki Cathedral, Mannerheimintie, Senate Square, Esplanadi and Kaisaniemi park |
 | `air` | `feeds/fmi.mjs`: the air quality stations of the Finnish Meteorological Institute in Helsinki, Espoo and Vantaa as `AirQualityObserved` entities, with 48 h of hourly history on start and each new hour after |
 | `hsl` | `feeds/hsl.mjs`: HSL's public vehicle positions (`mqtts://mqtt.hsl.fi:8883`, trams), up to 8 trams as `Vehicle` entities linked to their line (`PublicTransportRoute`) and the operator, each with `expiresAt` 8 minutes ahead |

@@ -1,12 +1,36 @@
-# Helsinki demo: Antares NGSI-LD broker with live open data of Helsinki (FMI air quality, HSL trams,
+# Helsinki demo: Antares NGSI-LD broker on PostGIS with live open data of Helsinki (FMI air quality, HSL trams,
 # Linked Events) and OpenStreetMap places, Grafana with the NGSI-LD data source from its GitHub
 # release. The feeds need internet.
 #   docker compose up -d      then http://localhost:3000
+# The history stays in the postgres volume across restarts; docker compose down -v starts empty.
 # Ports bind to 127.0.0.1: Grafana logs everyone in as admin and Antares authenticates nobody.
 name: ngsild-helsinki
 services:
+  # PostGIS for Antares: current state and history. Not published; only the broker reaches it.
+  postgres:
+    image: ghcr.io/baosystems/postgis:17-3.5
+    environment:
+      POSTGRES_USER: antares
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-antares}
+      POSTGRES_DB: antares
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U antares -d antares"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
   antares:
-    image: ghcr.io/joinedcontext/antares-broker:${ANTARES_VERSION:-0.1.4}
+    image: ghcr.io/joinedcontext/antares-broker:${ANTARES_VERSION:-0.2.0}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ANTARES_STORE: postgres
+      ANTARES_DATABASE_URL: postgres://antares:${POSTGRES_PASSWORD:-antares}@postgres:5432/antares
+      # one broker process, so the in-process change bus is safe with a database store
+      ANTARES_ALLOW_SHARED_LOCAL: "1"
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:${BROKER_PORT:-9090}:9090"
 
@@ -82,3 +106,6 @@ services:
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
       - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/helsinki-live.json
+
+volumes:
+  postgres:

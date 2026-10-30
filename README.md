@@ -68,7 +68,8 @@ stack.
 
 | Service | Purpose |
 |---|---|
-| `antares` | `ghcr.io/joinedcontext/antares-broker:0.1.4` (`ANTARES_VERSION` picks another), NGSI-LD API on http://localhost:9090/ngsi-ld/v1 |
+| `postgres` | PostGIS 17 (`ghcr.io/baosystems/postgis:17-3.5`): the broker's store, current state and history, in the `postgres` volume. Not published; `POSTGRES_PASSWORD` sets its password |
+| `antares` | `ghcr.io/joinedcontext/antares-broker:0.2.0` (`ANTARES_VERSION` picks another) with `ANTARES_STORE=postgres`, NGSI-LD API on http://localhost:9090/ngsi-ld/v1 |
 | `seed` | Runs `seed/seed.mjs` on every `up`: three Helsinki air quality stations with 48 h of hourly history ending now, devices, City Hall with a multi-instance attribute, a road, a zone and two parks (OpenStreetMap shapes), relationships between them. `docker compose run --rm seed` refreshes the history |
 | `grafana` | Grafana built from `plugin/Dockerfile` with the plugin, the provisioned data source and the sample dashboard |
 
@@ -206,8 +207,9 @@ screenshots/    images for this README
   entities per request; Save & test checks that the broker accepts the *Page size*.
 - Brokers cut long temporal answers (`206 Partial Content`). The plugin continues them; *Max temporal
   pages* bounds the requests per query. A broker that serves more instances per answer needs fewer
-  requests: Antares reads `ANTARES_TEMPORAL_INSTANCE_LIMIT` and `ANTARES_TEMPORAL_DEFAULT_INSTANCES`; the
-  `antares-broker:0.1.4` image cuts at 9 instances per attribute.
+  requests: Antares reads `ANTARES_TEMPORAL_INSTANCE_LIMIT` (at most 1000 instances per attribute from
+  0.2.0) and `ANTARES_TEMPORAL_DEFAULT_INSTANCES` (100). The dev stack in `datasource/` sets the limit to
+  9, so its 48 h of sample history comes back in 206 pages.
 
 ## License
 

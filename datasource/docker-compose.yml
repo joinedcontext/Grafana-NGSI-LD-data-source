@@ -1,4 +1,4 @@
-# Development and test stack: Antares NGSI-LD broker, sample data, Grafana with the plugin built in and the
+# Development and test stack: Antares NGSI-LD broker on PostGIS, sample data, Grafana with the plugin built in and the
 # sample dashboard (every query type). The integration and end-to-end tests run against it.
 # The Helsinki demo with live trams: ../demos/helsinki
 #   docker compose up -d      then http://localhost:3000 (the first start builds the plugin, a few minutes)
@@ -7,8 +7,34 @@
 # BIND_ADDRESS=0.0.0.0 publishes them on every interface; do that only on a trusted network.
 # With authentication in front of the broker: docker-compose.auth.yml
 services:
+  # PostGIS for Antares: current state and history. Not published; only the broker reaches it.
+  postgres:
+    image: ghcr.io/baosystems/postgis:17-3.5
+    environment:
+      POSTGRES_USER: antares
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-antares}
+      POSTGRES_DB: antares
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U antares -d antares"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
   antares:
-    image: ghcr.io/joinedcontext/antares-broker:${ANTARES_VERSION:-0.1.4}
+    image: ghcr.io/joinedcontext/antares-broker:${ANTARES_VERSION:-0.2.0}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ANTARES_STORE: postgres
+      ANTARES_DATABASE_URL: postgres://antares:${POSTGRES_PASSWORD:-antares}@postgres:5432/antares
+      # one broker process, so the in-process change bus is safe with a database store
+      ANTARES_ALLOW_SHARED_LOCAL: "1"
+      # 9 instances per attribute and answer, so the 48 h seed comes back in 206 pages and the
+      # tests exercise the plugin's continuation; the broker's own ceiling is 1000
+      ANTARES_TEMPORAL_INSTANCE_LIMIT: "9"
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:${BROKER_PORT:-9090}:9090"
 
@@ -52,3 +78,6 @@ services:
       - TOKEN_URL=${TOKEN_URL:-}
       - CLIENT_ID=${CLIENT_ID:-}
       - CLIENT_SECRET=${CLIENT_SECRET:-}
+
+volumes:
+  postgres:

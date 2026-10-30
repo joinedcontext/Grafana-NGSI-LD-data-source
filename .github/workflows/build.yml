@@ -38,9 +38,24 @@ jobs:
       run:
         working-directory: datasource/plugin
     services:
-      # the integration tests seed their own tenant into it
+      postgres:
+        image: ghcr.io/baosystems/postgis:17-3.5
+        env:
+          POSTGRES_USER: antares
+          POSTGRES_PASSWORD: antares
+          POSTGRES_DB: antares
+        options: >-
+          --health-cmd "pg_isready -U antares -d antares"
+          --health-interval 5s --health-timeout 3s --health-retries 30
+      # the integration tests seed their own tenant into it; it waits for the database on its own
       antares:
-        image: ghcr.io/joinedcontext/antares-broker:0.1.4
+        image: ghcr.io/joinedcontext/antares-broker:0.2.0
+        env:
+          ANTARES_STORE: postgres
+          ANTARES_DATABASE_URL: postgres://antares:antares@postgres:5432/antares
+          ANTARES_ALLOW_SHARED_LOCAL: "1"
+          # the 206 paging tests need answers cut short, as in datasource/docker-compose.yml
+          ANTARES_TEMPORAL_INSTANCE_LIMIT: "9"
         ports:
           - 9090:9090
     steps:
