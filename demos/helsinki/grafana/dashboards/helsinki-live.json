@@ -1104,7 +1104,8 @@
           "displayMode": "table",
           "placement": "right",
           "values": [
-            "value"
+            "value",
+            "percent"
           ]
         },
         "reduceOptions": {
@@ -1118,7 +1119,7 @@
           "mode": "single"
         }
       },
-      "description": "Upcoming events per Linked Events category, the 8 largest. Current value query of the Event category attribute, counted in Grafana (Group by, then Rows to fields so each category gets its own colour)."
+      "description": "Upcoming events per Linked Events category, the 8 largest, with count and share in the legend. Current value query of the Event category attribute, counted in Grafana (Group by, then Rows to fields so each category gets its own colour)."
     },
     {
       "id": 15,
